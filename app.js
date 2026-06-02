@@ -563,6 +563,7 @@ function renderSchoolsTable() {
       <td>${remainingText}</td>
       <td>
         <button class="list-action-btn list-inspect-btn" onclick="inspectSchool(${school.id})">Inspect</button>
+        <button class="list-action-btn list-inspect-btn" style="color:var(--emerald-text); border-color:var(--emerald-border);" onclick="extendSchool(${school.id}, '${escapeQuote(school.name)}')">Extend</button>
         <button class="list-action-btn list-delete-btn" onclick="deleteSchool(${school.id}, '${escapeQuote(school.name)}')">Delete</button>
       </td>
     `;
@@ -631,6 +632,25 @@ async function deleteSchool(schoolId, name) {
     } catch (err) {
       alert(err.message);
     }
+  }
+}
+
+async function extendSchool(schoolId, name) {
+  const daysText = prompt(`Enter the number of days to extend the trial/access period for "${name}":`, "30");
+  if (daysText === null) return; // Cancelled
+  
+  const days = parseInt(daysText, 10);
+  if (isNaN(days) || days <= 0) {
+    alert("Please enter a valid positive number of days.");
+    return;
+  }
+
+  try {
+    const res = await apiPost('api.php?action=admin_extend_school', { school_id: schoolId, days: days });
+    alert(res.message);
+    loadAdminDashboard();
+  } catch (err) {
+    alert(err.message);
   }
 }
 

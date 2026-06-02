@@ -92,6 +92,7 @@ if ($action === 'setup') {
             `school_code` VARCHAR(50) NOT NULL UNIQUE,
             `principal_password_hash` VARCHAR(255) NOT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `expires_at` TIMESTAMP NULL DEFAULT NULL,
             `election_status` VARCHAR(20) DEFAULT 'not_started',
             `show_head` TINYINT(1) DEFAULT 1,
             `show_sport` TINYINT(1) DEFAULT 1

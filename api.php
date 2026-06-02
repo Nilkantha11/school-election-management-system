@@ -37,6 +37,17 @@ try {
     exit;
 }
 
+// Check if expires_at column exists in schools table, if not add it and set to created_at + 30 days
+try {
+    $stmt = $pdo->query("SHOW COLUMNS FROM `schools` LIKE 'expires_at'");
+    if (!$stmt->fetch()) {
+        $pdo->exec("ALTER TABLE `schools` ADD COLUMN `expires_at` TIMESTAMP NULL DEFAULT NULL AFTER `created_at`");
+        $pdo->exec("UPDATE `schools` SET `expires_at` = DATE_ADD(`created_at`, INTERVAL 30 DAY)");
+    }
+} catch (PDOException $e) {
+    // Silently fail
+}
+
 // Ensure uploads folder exists
 if (!file_exists(__DIR__ . '/uploads')) {
     mkdir(__DIR__ . '/uploads', 0755, true);
@@ -44,19 +55,24 @@ if (!file_exists(__DIR__ . '/uploads')) {
 
 // 2. Helper Functions
 
-// Check if a school is locked (after 30 days of creation)
+// Check if a school is locked (after 30 days of creation or expires_at)
 function getSchoolRemainingDays($school_id) {
     global $pdo;
-    $stmt = $pdo->prepare("SELECT created_at FROM schools WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT expires_at, created_at FROM schools WHERE id = ?");
     $stmt->execute([$school_id]);
     $school = $stmt->fetch();
     if (!$school) return 0;
     
-    $created = strtotime($school['created_at']);
+    $expires_at = $school['expires_at'];
+    if (!$expires_at) {
+        $expires = strtotime($school['created_at']) + (30 * 24 * 60 * 60);
+    } else {
+        $expires = strtotime($expires_at);
+    }
+    
     $now = time();
-    $diff_seconds = $now - $created;
-    $days_elapsed = $diff_seconds / (60 * 60 * 24);
-    $days_remaining = max(0, 30 - floor($days_elapsed));
+    $diff_seconds = $expires - $now;
+    $days_remaining = max(0, ceil($diff_seconds / (60 * 60 * 24)));
     return $days_remaining;
 }
 
@@ -318,7 +334,7 @@ switch ($action) {
             $pdo->beginTransaction();
 
             $p_hash = password_hash($principal_password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO schools (name, school_code, principal_password_hash) VALUES (?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO schools (name, school_code, principal_password_hash, expires_at) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY))");
             $stmt->execute([$name, $school_code, $p_hash]);
             $new_school_id = $pdo->lastInsertId();
 
@@ -356,6 +372,49 @@ switch ($action) {
         $stmt = $pdo->prepare("DELETE FROM schools WHERE id = ?");
         $stmt->execute([$del_id]);
         echo json_encode(['success' => true, 'message' => 'School deleted successfully.']);
+        break;
+
+    case 'admin_extend_school':
+        requireRole(['admin']);
+        $sch_id = isset($input['school_id']) ? intval($input['school_id']) : 0;
+        $days = isset($input['days']) ? intval($input['days']) : 30;
+
+        if ($sch_id <= 0 || $days <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid school ID or extension days.']);
+            exit;
+        }
+
+        // Fetch current expires_at
+        $stmt = $pdo->prepare("SELECT expires_at, created_at FROM schools WHERE id = ?");
+        $stmt->execute([$sch_id]);
+        $school = $stmt->fetch();
+        if (!$school) {
+            http_response_code(404);
+            echo json_encode(['error' => 'School not found.']);
+            exit;
+        }
+
+        $current_expires = $school['expires_at'];
+        if (!$current_expires) {
+            $current_expires = date('Y-m-d H:i:s', strtotime($school['created_at']) + (30 * 24 * 60 * 60));
+        }
+
+        $current_time = time();
+        $exp_time = strtotime($current_expires);
+        
+        // If already expired, extend from now. If not, extend from current expiry date.
+        $base_time = max($current_time, $exp_time);
+        $new_expires = date('Y-m-d H:i:s', $base_time + ($days * 24 * 60 * 60));
+
+        $stmt_up = $pdo->prepare("UPDATE schools SET expires_at = ? WHERE id = ?");
+        $stmt_up->execute([$new_expires, $sch_id]);
+
+        echo json_encode([
+            'success' => true, 
+            'message' => "School access extended by $days days. New expiry: $new_expires.",
+            'new_expiry' => $new_expires
+        ]);
         break;
 
     case 'admin_get_school_data':

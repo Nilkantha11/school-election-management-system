@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DemocraSchools | Premium School Election Portal</title>
+  
+  <!-- Modern Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- External Libraries -->
+  <!-- Chart.js for beautiful results graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS for client-side Excel parse & export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Canvas Confetti for voting celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Mesh Gradient Backgrounds -->
+  <div class="mesh-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <div class="portal-wrapper">
+    <!-- Header Section -->
+    <header class="portal-header">
+      <div class="logo-area">
+        <div class="logo-icon">
+          <svg viewBox="0 0 100 100" class="svg-logo">
+            <path d="M50,15 L65,40 L85,50 L65,60 L50,85 L35,60 L15,50 L35,40 Z" fill="none" stroke="url(#logo-grad)" stroke-width="6" stroke-linejoin="round"/>
+            <circle cx="50" cy="50" r="12" fill="url(#logo-grad-inner)"/>
+            <defs>
+              <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3b82f6" />
+                <stop offset="50%" stop-color="#8b5cf6" />
+                <stop offset="100%" stop-color="#ec4899" />
+              </linearGradient>
+              <linearGradient id="logo-grad-inner" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#60a5fa" />
+                <stop offset="100%" stop-color="#ec4899" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="logo-text">Democra<span>Schools</span></span>
+      </div>
+      
+      <div class="header-right">
+        <div id="school-badge-container" class="header-tag hidden">Active School</div>
+        <button id="logout-btn" class="launch-btn rose-btn hidden">
+          <span>Logout</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="portal-main">
+
+      <!-- ==========================================================
+           1. DATABASE SETUP WIZARD VIEW
+           ========================================================== -->
+      <section id="setup-view" class="view-panel hidden">
+        <div class="info-card highlight-glow">
+          <div class="card-header">
+            <h2>Database Configuration Wizard</h2>
+            <p>Welcome to DemocraSchools. Connect your MySQL database (e.g. Milesweb DB) to get started.</p>
+          </div>
+          <form id="setup-form" class="form-container">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="setup-db-host">Database Host</label>
+                <input type="text" id="setup-db-host" value="localhost" required>
+              </div>
+              <div class="form-group">
+                <label for="setup-db-name">Database Name</label>
+                <input type="text" id="setup-db-name" placeholder="e.g. karan_election_db" required>
+              </div>
+              <div class="form-group">
+                <label for="setup-db-user">Database User</label>
+                <input type="text" id="setup-db-user" placeholder="e.g. karan_db_user" required>
+              </div>
+              <div class="form-group">
+                <label for="setup-db-pass">Database Password</label>
+                <input type="password" id="setup-db-pass" placeholder="Database password">
+              </div>
+            </div>
+            <hr class="form-divider">
+            <div class="card-header">
+              <h3>Super Admin Credentials</h3>
+              <p>Set credentials to access control dashboard and manage all school portals.</p>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="setup-admin-user">Admin Username</label>
+                <input type="text" id="setup-admin-user" value="admin" required>
+              </div>
+              <div class="form-group">
+                <label for="setup-admin-pass">Admin Password</label>
+                <input type="password" id="setup-admin-pass" placeholder="Set secure password" required>
+              </div>
+            </div>
+            <button type="submit" class="action-btn purple-glow-btn">
+              <span>Initialize System Tables</span>
+            </button>
+          </form>
+          <div id="setup-message" class="alert-box hidden"></div>
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           2. UNIVERSAL PORTAL LOGIN VIEW
+           ========================================================== -->
+      <section id="login-view" class="view-panel hidden">
+        <div class="login-wrapper">
+          <div class="login-tabs">
+            <button class="login-tab active" data-role="student">Student Voter</button>
+            <button class="login-tab" data-role="teacher">Teacher</button>
+            <button class="login-tab" data-role="principal">Principal</button>
+            <button class="login-tab" data-role="admin">Super Admin</button>
+          </div>
+
+          <!-- Student Card -->
+          <div class="login-card active-card" id="student-login-card">
+            <div class="card-title-block">
+              <h2>Student Voting Portal</h2>
+              <p>Enter your School Code and Student ID / Roll Number to cast your vote.</p>
+            </div>
+            <form id="student-login-form" class="form-container">
+              <div class="form-group">
+                <label for="student-school-code">School Code</label>
+                <input type="text" id="student-school-code" placeholder="e.g. DPS_DELHI" required>
+              </div>
+              <div class="form-group">
+                <label for="student-voter-id">Student ID / Roll Number</label>
+                <input type="text" id="student-voter-id" placeholder="e.g. STU1024" required>
+              </div>
+              <button type="submit" class="action-btn blue-glow-btn">Enter Voting Booth</button>
+            </form>
+          </div>
+
+          <!-- Teacher Card -->
+          <div class="login-card" id="teacher-login-card">
+            <div class="card-title-block">
+              <h2>Teacher Login</h2>
+              <p>Access your class rosters, edit student information, and configure candidates.</p>
+            </div>
+            <form id="teacher-login-form" class="form-container">
+              <div class="form-group">
+                <label for="teacher-school-code">School Code</label>
+                <input type="text" id="teacher-school-code" placeholder="e.g. DPS_DELHI" required>
+              </div>
+              <div class="form-group">
+                <label for="teacher-username">Username</label>
+                <input type="text" id="teacher-username" placeholder="e.g. teacher_science" required>
+              </div>
+              <div class="form-group">
+                <label for="teacher-password">Password</label>
+                <input type="password" id="teacher-password" placeholder="••••••••" required>
+              </div>
+              <button type="submit" class="action-btn purple-glow-btn">Teacher Login</button>
+            </form>
+          </div>
+
+          <!-- Principal Card -->
+          <div class="login-card" id="principal-login-card">
+            <div class="card-title-block">
+              <h2>Principal Dashboard Login</h2>
+              <p>Manage teachers, groups, and monitor or configure the active school election.</p>
+            </div>
+            <form id="principal-login-form" class="form-container">
+              <div class="form-group">
+                <label for="principal-school-code">School Code</label>
+                <input type="text" id="principal-school-code" placeholder="e.g. DPS_DELHI" required>
+              </div>
+              <div class="form-group">
+                <label for="principal-password">Principal Password</label>
+                <input type="password" id="principal-password" placeholder="••••••••" required>
+              </div>
+              <button type="submit" class="action-btn emerald-glow-btn">Principal Login</button>
+            </form>
+          </div>
+
+          <!-- Super Admin Card -->
+          <div class="login-card" id="admin-login-card">
+            <div class="card-title-block">
+              <h2>Super Admin Terminal</h2>
+              <p>System configuration panel for adding and monitoring multiple schools.</p>
+            </div>
+            <form id="admin-login-form" class="form-container">
+              <div class="form-group">
+                <label for="admin-username">Super Admin Username</label>
+                <input type="text" id="admin-username" placeholder="e.g. admin" required>
+              </div>
+              <div class="form-group">
+                <label for="admin-password">Master Password</label>
+                <input type="password" id="admin-password" placeholder="••••••••" required>
+              </div>
+              <button type="submit" class="action-btn orange-glow-btn">Access Master Panel</button>
+            </form>
+          </div>
+
+          <div id="login-message" class="alert-box error-alert hidden"></div>
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           3. SUPER ADMIN DASHBOARD VIEW
+           ========================================================== -->
+      <section id="admin-view" class="view-panel hidden">
+        <div class="dashboard-header">
+          <div>
+            <h1>Super Admin Terminal</h1>
+            <p>Manage all registered schools, view status, and track trial periods.</p>
+          </div>
+          <button id="open-create-school-modal" class="launch-btn orange-btn">
+            <span>+ Add New School</span>
+          </button>
+        </div>
+
+        <div class="grid-layout">
+          <!-- Schools Roster Card -->
+          <div class="panel-card col-span-3">
+            <div class="card-header">
+              <h2>Registered Schools</h2>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>School Name</th>
+                    <th>School Code</th>
+                    <th>Teachers</th>
+                    <th>Students</th>
+                    <th>Status</th>
+                    <th>Created On</th>
+                    <th>Trial Remaining</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="schools-list-tbody">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- School Inspect Modal -->
+        <div id="inspect-school-modal" class="modal-backdrop hidden">
+          <div class="modal-container large-modal">
+            <div class="modal-header">
+              <h2 id="inspect-school-name">School Details</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="stats-row">
+                <div class="stat-card">
+                  <span class="stat-num" id="inspect-total-students">0</span>
+                  <span class="stat-lbl">Total Students</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-num" id="inspect-voted-students">0</span>
+                  <span class="stat-lbl">Votes Cast</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-num" id="inspect-turnout">0%</span>
+                  <span class="stat-lbl">Turnout</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-num" id="inspect-days-remaining">0 Days</span>
+                  <span class="stat-lbl">Trial Period Status</span>
+                </div>
+              </div>
+              <div class="grid-layout margin-top-20">
+                <div class="panel-card col-span-2">
+                  <h3>Active Groups</h3>
+                  <div class="table-wrapper mini-table">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Group Name</th>
+                          <th>Type</th>
+                          <th>Visibility</th>
+                        </tr>
+                      </thead>
+                      <tbody id="inspect-groups-tbody"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="panel-card">
+                  <h3>Teacher Accounts</h3>
+                  <div class="table-wrapper mini-table">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Username</th>
+                        </tr>
+                      </thead>
+                      <tbody id="inspect-teachers-tbody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div class="panel-card margin-top-20">
+                <h3>Registered Election Candidates</h3>
+                <div class="table-wrapper mini-table">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Candidate Name</th>
+                        <th>Gender</th>
+                        <th>Group</th>
+                        <th>Party</th>
+                        <th>Symbol</th>
+                      </tr>
+                    </thead>
+                    <tbody id="inspect-candidates-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add School Modal -->
+        <div id="add-school-modal" class="modal-backdrop hidden">
+          <div class="modal-container">
+            <div class="modal-header">
+              <h2>Add New School</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <form id="create-school-form" class="form-container">
+                <div class="form-group">
+                  <label for="new-school-name">School Name</label>
+                  <input type="text" id="new-school-name" placeholder="e.g. Delhi Public School" required>
+                </div>
+                <div class="form-group">
+                  <label for="new-school-code">School Login Code</label>
+                  <input type="text" id="new-school-code" placeholder="e.g. DPS_DELHI" required>
+                  <small class="input-hint">Unique identifier for teachers, principal, and students to log in.</small>
+                </div>
+                <div class="form-group">
+                  <label for="new-principal-pass">Principal Account Password</label>
+                  <input type="text" id="new-principal-pass" placeholder="Set login password for Principal" required>
+                </div>
+                <button type="submit" class="action-btn orange-glow-btn">Create School Portal</button>
+              </form>
+              <div id="create-school-message" class="alert-box hidden"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           4. PRINCIPAL DASHBOARD VIEW
+           ========================================================== -->
+      <section id="principal-view" class="view-panel hidden">
+        <div class="dashboard-header">
+          <div>
+            <h1 id="principal-school-title">Principal Dashboard</h1>
+            <p>Admin Control Panel for organizing elections, managing groups, and creating teachers logins.</p>
+          </div>
+          <div id="principal-expiry-warning" class="header-tag alert-tag">Days Left: 30</div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card blue-theme">
+            <span class="stat-num" id="p-stat-total">0</span>
+            <span class="stat-lbl">Total Enrolled Voters</span>
+          </div>
+          <div class="stat-card purple-theme">
+            <span class="stat-num" id="p-stat-voted">0</span>
+            <span class="stat-lbl">Votes Received</span>
+          </div>
+          <div class="stat-card emerald-theme">
+            <span class="stat-num" id="p-stat-turnout">0%</span>
+            <span class="stat-lbl">Voter Turnout</span>
+          </div>
+          <div class="stat-card orange-theme">
+            <span class="stat-num" id="p-stat-status">Not Started</span>
+            <span class="stat-lbl">Election Status</span>
+          </div>
+        </div>
+
+        <div class="grid-layout margin-top-20">
+          <!-- Election Control Card -->
+          <div class="panel-card col-span-2">
+            <div class="card-header">
+              <h2>Election Phase Controller</h2>
+            </div>
+            <div class="controller-box">
+              <p>Use the controls below to steer the election phase. Students can only cast votes during the **Live Election** or **Mock Election** modes.</p>
+              <div class="button-bar">
+                <button id="btn-status-start" class="control-btn run-btn">Start Live Election</button>
+                <button id="btn-status-mock" class="control-btn mock-btn">Start Mock Election</button>
+                <button id="btn-status-stop" class="control-btn stop-btn">Stop Election (Show Results)</button>
+                <button id="btn-status-reset" class="control-btn reset-btn">Reset Election Data</button>
+              </div>
+              <small class="input-hint text-warning">Caution: **Reset Election Data** permanently wipes out all casted student votes and marks all student accounts as "unvoted". Use with care.</small>
+            </div>
+            
+            <hr class="form-divider">
+            
+            <div class="card-header">
+              <h2>Live Turnout & Results Charts</h2>
+            </div>
+            <div class="chart-container">
+              <canvas id="turnout-chart" width="400" height="200"></canvas>
+            </div>
+          </div>
+
+          <!-- Teachers Management Card -->
+          <div class="panel-card">
+            <div class="card-header">
+              <h2>Teacher Logins (Max 5)</h2>
+            </div>
+            <form id="add-teacher-form" class="form-container mini-form">
+              <div class="form-group">
+                <input type="text" id="teacher-new-user" placeholder="Teacher Username" required>
+              </div>
+              <div class="form-group">
+                <input type="password" id="teacher-new-pass" placeholder="Password" required>
+              </div>
+              <button type="submit" class="action-btn purple-btn">+ Add Teacher Account</button>
+            </form>
+            <div id="teacher-limit-msg" class="alert-box error-alert hidden">Maximum teachers limit reached.</div>
+            <div class="teachers-list-container margin-top-20">
+              <ul class="flat-list" id="teachers-flat-list">
+                <!-- Injected via JavaScript -->
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Groups Management Card -->
+        <div class="panel-card margin-top-20">
+          <div class="card-header">
+            <h2>Election Groups & Houses</h2>
+            <button id="btn-add-group-modal" class="launch-btn blue-btn">+ Add Custom Group</button>
+          </div>
+          <div class="groups-grid" id="principal-groups-container">
+            <!-- Injected dynamically with options to toggle visibility, delete custom groups -->
+          </div>
+        </div>
+
+        <!-- Detailed Candidate Tally (Principal Results) -->
+        <div class="panel-card margin-top-20">
+          <div class="card-header">
+            <h2>Detailed Candidate Vote Counts</h2>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Candidate Name</th>
+                  <th>Gender</th>
+                  <th>Group Name</th>
+                  <th>Party</th>
+                  <th>Symbol</th>
+                  <th>Votes Received</th>
+                </tr>
+              </thead>
+              <tbody id="principal-results-tbody">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Add Custom Group Modal -->
+        <div id="add-group-modal" class="modal-backdrop hidden">
+          <div class="modal-container">
+            <div class="modal-header">
+              <h2>Add Custom Election Group</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <form id="create-group-form" class="form-container">
+                <div class="form-group">
+                  <label for="new-group-name">Group Name</label>
+                  <input type="text" id="new-group-name" placeholder="e.g. Gold House or Vice Principal" required>
+                </div>
+                <div class="form-group">
+                  <label for="new-group-type">Group Type</label>
+                  <select id="new-group-type" required>
+                    <option value="house">Standard House (Respective group students only)</option>
+                    <option value="head">Head Position (All students in school can vote)</option>
+                    <option value="sport">Sports Position (All students in school can vote)</option>
+                  </select>
+                </div>
+                <button type="submit" class="action-btn blue-glow-btn">Add Group</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Password Change Modal -->
+        <div id="change-teacher-pass-modal" class="modal-backdrop hidden">
+          <div class="modal-container">
+            <div class="modal-header">
+              <h2>Change Password</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <form id="change-teacher-pass-form" class="form-container">
+                <input type="hidden" id="change-pass-teacher-id">
+                <div class="form-group">
+                  <label>Teacher Account: <span id="change-pass-teacher-username" class="logo-text"></span></label>
+                  <input type="password" id="change-pass-teacher-newpwd" placeholder="Enter new password" required>
+                </div>
+                <button type="submit" class="action-btn purple-glow-btn">Update Password</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           5. TEACHER DASHBOARD VIEW
+           ========================================================== -->
+      <section id="teacher-view" class="view-panel hidden">
+        <div class="dashboard-header">
+          <div>
+            <h1>Teacher Management Hub</h1>
+            <p>Upload student lists, configure election candidates, set party symbols, and inspect configuration correctness.</p>
+          </div>
+          <div class="header-actions">
+            <button id="btn-export-excel" class="launch-btn emerald-btn">
+              <span>Export to Excel</span>
+            </button>
+            <button id="btn-mock-sandbox" class="launch-btn purple-btn">
+              <span>Mock Voting Sandbox</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid-layout">
+          <!-- Student Import & CRUD -->
+          <div class="panel-card col-span-2">
+            <div class="card-header">
+              <h2>Student Roster Database</h2>
+              <button id="btn-add-student-modal" class="launch-btn blue-btn">+ Add Student Manually</button>
+            </div>
+            
+            <div class="filter-search-row">
+              <input type="text" id="roster-search" placeholder="Search by name or Roll ID...">
+              <select id="roster-filter-group">
+                <option value="all">All Groups</option>
+                <!-- Dynamic options -->
+              </select>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Roll ID</th>
+                    <th>Student Name</th>
+                    <th>Gender</th>
+                    <th>Group Name</th>
+                    <th>Voted?</th>
+                    <th>Candidate?</th>
+                    <th>Party Detail</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="student-roster-tbody">
+                  <!-- Injected via Javascript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Excel Upload Panel -->
+          <div class="panel-card">
+            <div class="card-header">
+              <h2>Excel Bulk Import</h2>
+            </div>
+            <div class="drag-drop-zone" id="excel-drop-zone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+              </svg>
+              <p>Drag and drop school Excel sheet here, or click to upload.</p>
+              <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden-file-input">
+              <button type="button" id="btn-trigger-upload" class="action-btn purple-btn mini-btn">Select Excel File</button>
+            </div>
+            <div class="instructions-box margin-top-20">
+              <h4>Template Columns Checklist:</h4>
+              <ul class="checklist">
+                <li><code>student_code</code>: Unique Student/Roll Number</li>
+                <li><code>name</code>: Student's full name</li>
+                <li><code>gender</code>: <code>boy</code> or <code>girl</code></li>
+                <li><code>group_name</code>: e.g. Red House, Sports Captain</li>
+                <li><code>is_candidate</code>: <code>1</code> for candidates, <code>0</code> otherwise</li>
+                <li><code>party_name</code>: Text name for party (optional)</li>
+                <li><code>party_symbol</code>: Emoji (e.g. 🌟, 🚀) or upload name (optional)</li>
+              </ul>
+              <button id="btn-download-template" class="link-btn">Download Empty Excel Template</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student Form Modal (Add & Edit) -->
+        <div id="student-form-modal" class="modal-backdrop hidden">
+          <div class="modal-container medium-modal">
+            <div class="modal-header">
+              <h2 id="student-modal-title">Edit Student Record</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <form id="student-detail-form" class="form-container">
+                <input type="hidden" id="edit-student-id">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="edit-student-code">Student / Roll ID</label>
+                    <input type="text" id="edit-student-code" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="edit-student-name">Full Name</label>
+                    <input type="text" id="edit-student-name" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="edit-student-gender">Gender</label>
+                    <select id="edit-student-gender" required>
+                      <option value="boy">Boy</option>
+                      <option value="girl">Girl</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="edit-student-group">Group / House Assignment</label>
+                    <select id="edit-student-group" required></select>
+                  </div>
+                </div>
+                
+                <hr class="form-divider">
+                
+                <!-- Candidate Options -->
+                <div class="candidate-check-container">
+                  <input type="checkbox" id="edit-student-candidate">
+                  <label for="edit-student-candidate" class="checkbox-label">This student is standing as an Election Candidate</label>
+                </div>
+
+                <div id="candidate-details-subpanel" class="candidate-subpanel hidden">
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="edit-candidate-party">Party Name</label>
+                      <input type="text" id="edit-candidate-party" placeholder="e.g. Unity Alliance">
+                    </div>
+                    <div class="form-group">
+                      <label for="edit-candidate-symbol">Party Symbol (Choose Emoji or Upload Image)</label>
+                      <div class="symbol-builder-input-row">
+                        <select id="edit-candidate-symbol-emoji">
+                          <option value="🌟">🌟 Star</option>
+                          <option value="🚀">🚀 Rocket</option>
+                          <option value="🔥">🔥 Flame</option>
+                          <option value="🦁">🦁 Lion</option>
+                          <option value="🐘">🐘 Elephant</option>
+                          <option value="☀️">☀️ Sun</option>
+                          <option value="🌙">🌙 Moon</option>
+                          <option value="🌳">🌳 Tree</option>
+                          <option value="📖">📖 Book</option>
+                          <option value="✏️">✏️ Pencil</option>
+                          <option value="🌂">🌂 Umbrella</option>
+                          <option value="🚲">🚲 Bicycle</option>
+                        </select>
+                        <span class="or-separator">OR</span>
+                        <input type="file" id="edit-candidate-symbol-file" accept="image/*">
+                      </div>
+                      <input type="hidden" id="edit-candidate-symbol-path">
+                      <div class="symbol-preview-box margin-top-10">
+                        <span>Symbol Preview:</span>
+                        <div id="party-symbol-preview" class="symbol-preview-avatar">🌟</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" class="action-btn blue-glow-btn">Save Student Record</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mock Testing sandbox Modal -->
+        <div id="mock-sandbox-modal" class="modal-backdrop hidden">
+          <div class="modal-container large-modal">
+            <div class="modal-header">
+              <h2>Candidate Display Verification Sandbox</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="description">Verify exactly how the candidates look, including custom uploaded symbol images and emojis. Select a group to see how candidate tiles will render on a student's voting screen.</p>
+              
+              <div class="sandbox-filter-row margin-top-10">
+                <label for="sandbox-select-group">Inspect Group Rendering:</label>
+                <select id="sandbox-select-group"></select>
+              </div>
+
+              <div class="sandbox-panels margin-top-20">
+                <div class="sandbox-section">
+                  <h3>Boys Section Candidates</h3>
+                  <div class="candidates-render-grid" id="sandbox-boys-grid">
+                    <!-- Cards here -->
+                  </div>
+                </div>
+                <div class="sandbox-section">
+                  <h3>Girls Section Candidates</h3>
+                  <div class="candidates-render-grid" id="sandbox-girls-grid">
+                    <!-- Cards here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           6. STUDENT VOTING BOOTH VIEW
+           ========================================================== -->
+      <section id="student-view" class="view-panel hidden">
+        <div class="student-header">
+          <div>
+            <span class="booth-tag">SECURE BALLOT BOOTH</span>
+            <h1 id="voter-welcome-name">Welcome, Student</h1>
+            <p id="voter-welcome-info">Red House | Student ID: STU1024</p>
+          </div>
+          <div class="voter-timer" id="voting-step-indicator">Step 1 of 3</div>
+        </div>
+
+        <!-- Voting Progress Bar -->
+        <div class="progress-bar-container">
+          <div class="progress-fill" id="voting-progress-fill"></div>
+        </div>
+
+        <!-- Active Vote Category Container -->
+        <div class="ballot-card margin-top-20">
+          <div class="ballot-group-title">
+            <h2 id="ballot-group-heading">Red House Election</h2>
+            <p id="ballot-group-subheading">Select 1 boy candidate and 1 girl candidate from the list below.</p>
+          </div>
+
+          <div class="ballot-columns margin-top-20">
+            <!-- Boy candidates column -->
+            <div class="ballot-column">
+              <div class="column-header">
+                <h3>Boy Candidates (Select Max 1)</h3>
+              </div>
+              <div class="candidates-choice-list" id="ballot-boys-container">
+                <!-- Cards injected via JS -->
+              </div>
+            </div>
+
+            <!-- Girl candidates column -->
+            <div class="ballot-column">
+              <div class="column-header">
+                <h3>Girl Candidates (Select Max 1)</h3>
+              </div>
+              <div class="candidates-choice-list" id="ballot-girls-container">
+                <!-- Cards injected via JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="ballot-actions-row margin-top-20">
+            <button id="btn-ballot-prev" class="launch-btn disabled-btn" disabled>Back</button>
+            <button id="btn-ballot-next" class="action-btn blue-glow-btn">Next Section</button>
+          </div>
+        </div>
+
+        <!-- Summary & Cast Modal (Step before submission) -->
+        <div id="vote-summary-modal" class="modal-backdrop hidden">
+          <div class="modal-container medium-modal">
+            <div class="modal-header">
+              <h2>Review Your Ballot Paper</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="description">Please review your selections. You can click 'Go Back' to alter your vote, or 'Submit Secure Ballot' to cast your final vote. You cannot change your vote after submission.</p>
+              
+              <div class="ballot-summary-list" id="ballot-summary-container">
+                <!-- Summary rows -->
+              </div>
+
+              <!-- Ballot Box Drop Animation Container -->
+              <div class="ballot-box-container hidden" id="ballot-drop-box">
+                <div class="ballot-slot"></div>
+                <div class="ballot-paper" id="ballot-paper-anim">
+                  <div class="paper-line"></div>
+                  <div class="paper-line"></div>
+                </div>
+                <div class="ballot-box-body">🗳️ SECURE BALLOT BOX</div>
+              </div>
+
+              <div class="ballot-actions-row margin-top-20" id="summary-buttons-row">
+                <button class="launch-btn disabled-btn modal-close">Go Back</button>
+                <button id="btn-cast-final-vote" class="action-btn emerald-glow-btn">Submit Secure Ballot</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success View -->
+        <div id="vote-success-modal" class="modal-backdrop hidden">
+          <div class="modal-container text-center">
+            <div class="modal-body padding-40">
+              <div class="success-icon-avatar">✓</div>
+              <h2 class="margin-top-20">Vote Casted Successfully!</h2>
+              <p class="description margin-top-10">Thank you for participating in your school's democratic election process. Your votes have been recorded anonymously and securely.</p>
+              <button id="btn-vote-finish" class="action-btn blue-glow-btn margin-top-20">Finish and Exit</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer Area -->
+    <footer class="portal-footer">
+      <p>&copy; 2026 DemocraSchools Election Suite. Served securely from Milesweb hosting environments. All sessions encrypted.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

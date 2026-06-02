@@ -1,0 +1,12 @@
+# Ignore database configuration file (contains database credentials)
+db_config.php
+
+# Ignore student uploads (custom party symbols)
+uploads/
+
+# Ignore temporary and OS files
+.DS_Store
+.cpanel.yml.tmp
+node_modules/
+.vscode/
+.idea/

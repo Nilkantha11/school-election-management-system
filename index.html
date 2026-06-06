@@ -124,17 +124,17 @@
       <section id="login-view" class="view-panel hidden">
         <div class="login-wrapper">
           <div class="login-tabs">
-            <button class="login-tab active" data-role="student">Student Voter</button>
+            <button class="login-tab active" data-role="student">Voting Booth</button>
             <button class="login-tab" data-role="teacher">Teacher</button>
             <button class="login-tab" data-role="principal">Principal</button>
             <button class="login-tab" data-role="admin">Super Admin</button>
           </div>
 
-          <!-- Student Card -->
+          <!-- Student / Booth Setup Card -->
           <div class="login-card active-card" id="student-login-card">
             <div class="card-title-block">
-              <h2>Student Voting Portal</h2>
-              <p>Enter your School Code and Student ID / Roll Number to cast your vote.</p>
+              <h2>Voting Booth Setup</h2>
+              <p>Enter your School Code and Teacher/Principal password to configure this device as a public voting booth.</p>
             </div>
             <form id="student-login-form" class="form-container">
               <div class="form-group">
@@ -142,10 +142,19 @@
                 <input type="text" id="student-school-code" placeholder="e.g. DPS_DELHI" required>
               </div>
               <div class="form-group">
-                <label for="student-voter-id">Student ID / Roll Number</label>
-                <input type="text" id="student-voter-id" placeholder="e.g. STU1024" required>
+                <label for="student-voter-id">Admin/Teacher Password</label>
+                <input type="password" id="student-voter-id" placeholder="••••••••" required>
               </div>
-              <button type="submit" class="action-btn blue-glow-btn">Enter Voting Booth</button>
+              
+              <!-- Setup selection shown after authentication -->
+              <div id="booth-group-selection-container" class="form-group hidden">
+                <label for="booth-select-group">Lock Booth to Election Group</label>
+                <select id="booth-select-group">
+                  <!-- Injected dynamically -->
+                </select>
+              </div>
+              
+              <button type="submit" id="btn-booth-submit" class="action-btn blue-glow-btn">Setup Booth</button>
             </form>
           </div>
 
@@ -734,21 +743,16 @@
         <div class="student-header">
           <div>
             <span class="booth-tag">SECURE BALLOT BOOTH</span>
-            <h1 id="voter-welcome-name">Welcome, Student</h1>
-            <p id="voter-welcome-info">Red House | Student ID: STU1024</p>
+            <h1 id="voter-welcome-name">School Election</h1>
+            <p id="voter-welcome-info">Active Booth: Loading...</p>
           </div>
-          <div class="voter-timer" id="voting-step-indicator">Step 1 of 3</div>
+          <div class="voter-timer" id="voting-step-indicator">Active Booth</div>
         </div>
 
-        <!-- Voting Progress Bar -->
-        <div class="progress-bar-container">
-          <div class="progress-fill" id="voting-progress-fill"></div>
-        </div>
-
-        <!-- Active Vote Category Container -->
+        <!-- Active Category Container -->
         <div class="ballot-card margin-top-20">
           <div class="ballot-group-title">
-            <h2 id="ballot-group-heading">Red House Election</h2>
+            <h2 id="ballot-group-heading">Loading Election...</h2>
             <p id="ballot-group-subheading">Select 1 boy candidate and 1 girl candidate from the list below.</p>
           </div>
 
@@ -775,8 +779,8 @@
           </div>
 
           <div class="ballot-actions-row margin-top-20">
-            <button id="btn-ballot-prev" class="launch-btn disabled-btn" disabled>Back</button>
-            <button id="btn-ballot-next" class="action-btn blue-glow-btn">Next Section</button>
+            <div></div> <!-- Spacer -->
+            <button id="btn-ballot-next" class="action-btn blue-glow-btn" style="width: auto; padding: 12px 30px;">Review & Cast Ballot</button>
           </div>
         </div>
 
@@ -818,8 +822,8 @@
             <div class="modal-body padding-40">
               <div class="success-icon-avatar">✓</div>
               <h2 class="margin-top-20">Vote Casted Successfully!</h2>
-              <p class="description margin-top-10">Thank you for participating in your school's democratic election process. Your votes have been recorded anonymously and securely.</p>
-              <button id="btn-vote-finish" class="action-btn blue-glow-btn margin-top-20">Finish and Exit</button>
+              <p class="description margin-top-10">Your vote has been recorded anonymously and securely.</p>
+              <p id="success-countdown-message" class="text-warning margin-top-20 font-weight-bold" style="font-size:0.9rem;">This booth will reset in 3 seconds for the next voter...</p>
             </div>
           </div>
         </div>

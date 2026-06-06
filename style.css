@@ -940,12 +940,7 @@ body {
 
 /* Candidate Toggles in edit student modal */
 .candidate-check-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin-bottom: 10px;
+  display: none !important;
 }
 
 .candidate-subpanel {

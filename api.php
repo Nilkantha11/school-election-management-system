@@ -131,6 +131,12 @@ switch ($action) {
                 $response['days_remaining'] = getSchoolRemainingDays($school_id);
                 $response['is_locked'] = $response['days_remaining'] <= 0;
             }
+            if ($user_role === 'booth') {
+                $response['group_id'] = $_SESSION['group_id'];
+                $stmt_g = $pdo->prepare("SELECT name FROM groups WHERE id = ?");
+                $stmt_g->execute([$_SESSION['group_id']]);
+                $response['group_name'] = $stmt_g->fetchColumn() ?: '';
+            }
             echo json_encode($response);
         } else {
             echo json_encode(['logged_in' => false]);
@@ -224,9 +230,10 @@ switch ($action) {
                 echo json_encode(['success' => false, 'error' => 'School code not found.']);
             }
         } 
-        else if ($role === 'student') {
-            $school_code = isset($input['school_code']) ? $input['school_code'] : '';
-            $student_code = isset($input['student_code']) ? $input['student_code'] : '';
+        else if ($role === 'booth') {
+            $school_code = isset($input['school_code']) ? trim($input['school_code']) : '';
+            $password = isset($input['password']) ? trim($input['password']) : '';
+            $group_id = isset($input['group_id']) ? intval($input['group_id']) : 0;
             
             $stmt = $pdo->prepare("SELECT * FROM schools WHERE school_code = ?");
             $stmt->execute([$school_code]);
@@ -242,41 +249,66 @@ switch ($action) {
 
                 if ($school['election_status'] !== 'started' && $school['election_status'] !== 'mock') {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'error' => 'Election is not currently active at this school. Status: ' . $school['election_status']]);
+                    echo json_encode(['success' => false, 'error' => 'Election is not currently active. Status: ' . $school['election_status']]);
                     exit;
                 }
 
-                $stmt = $pdo->prepare("SELECT s.*, g.name as group_name FROM students s JOIN groups g ON s.group_id = g.id WHERE s.school_id = ? AND s.student_code = ?");
-                $stmt->execute([$school['id'], $student_code]);
-                $student = $stmt->fetch();
-                
-                if ($student) {
-                    if ($student['has_voted']) {
-                        http_response_code(400);
-                        echo json_encode(['success' => false, 'error' => 'You have already casted your vote.']);
-                    } else {
-                        $_SESSION['role'] = 'student';
-                        $_SESSION['username'] = $student['name'];
-                        $_SESSION['student_code'] = $student_code;
-                        $_SESSION['student_id'] = $student['id'];
-                        $_SESSION['school_id'] = $school['id'];
-                        $_SESSION['group_id'] = $student['group_id'];
-                        $_SESSION['gender'] = $student['gender'];
-                        echo json_encode([
-                            'success' => true, 
-                            'role' => 'student',
-                            'student' => [
-                                'name' => $student['name'],
-                                'student_code' => $student['student_code'],
-                                'group_name' => $student['group_name'],
-                                'gender' => $student['gender']
-                            ]
-                        ]);
-                    }
+                // Validate credentials (either principal or teacher can authenticate)
+                $auth_success = false;
+                if (password_verify($password, $school['principal_password_hash'])) {
+                    $auth_success = true;
                 } else {
-                    http_response_code(404);
-                    echo json_encode(['success' => false, 'error' => 'Student ID not found in this school records.']);
+                    $stmt_t = $pdo->prepare("SELECT password_hash FROM teachers WHERE school_id = ?");
+                    $stmt_t->execute([$school['id']]);
+                    $teachers_pw = $stmt_t->fetchAll(PDO::FETCH_COLUMN);
+                    foreach ($teachers_pw as $tpw) {
+                        if (password_verify($password, $tpw)) {
+                            $auth_success = true;
+                            break;
+                        }
+                    }
                 }
+
+                if (!$auth_success) {
+                    http_response_code(401);
+                    echo json_encode(['success' => false, 'error' => 'Invalid password credentials.']);
+                    exit;
+                }
+
+                // If group_id is 0 or not provided, return the list of groups
+                if ($group_id === 0) {
+                    $stmt_groups = $pdo->prepare("SELECT id, name FROM groups WHERE school_id = ? AND is_visible = 1");
+                    $stmt_groups->execute([$school['id']]);
+                    $groups = $stmt_groups->fetchAll(PDO::FETCH_ASSOC);
+                    echo json_encode([
+                        'success' => true,
+                        'requires_group' => true,
+                        'groups' => $groups
+                    ]);
+                    exit;
+                }
+
+                // Check if group exists
+                $stmt_g = $pdo->prepare("SELECT name FROM groups WHERE id = ? AND school_id = ?");
+                $stmt_g->execute([$group_id, $school['id']]);
+                $group_name = $stmt_g->fetchColumn();
+                if (!$group_name) {
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'error' => 'Selected voting group not found in this school.']);
+                    exit;
+                }
+
+                $_SESSION['role'] = 'booth';
+                $_SESSION['username'] = "Booth: $group_name";
+                $_SESSION['school_id'] = $school['id'];
+                $_SESSION['group_id'] = $group_id;
+                echo json_encode([
+                    'success' => true,
+                    'role' => 'booth',
+                    'school_name' => $school['name'],
+                    'group_name' => $group_name,
+                    'group_id' => $group_id
+                ]);
             } else {
                 http_response_code(404);
                 echo json_encode(['success' => false, 'error' => 'School code not found.']);
@@ -451,9 +483,11 @@ switch ($action) {
         $stmt->execute([$inspect_id]);
         $candidates = $stmt->fetchAll();
 
-        // Student Counts
-        $stmt = $pdo->prepare("SELECT COUNT(*) as total, SUM(has_voted) as voted FROM students WHERE school_id = ?");
-        $stmt->execute([$inspect_id]);
+        // Student Counts (now candidates and votes)
+        $stmt = $pdo->prepare("SELECT 
+            (SELECT COUNT(*) FROM students WHERE school_id = ?) as total, 
+            (SELECT COUNT(*) FROM votes WHERE school_id = ? AND is_mock = 0) as voted");
+        $stmt->execute([$inspect_id, $inspect_id]);
         $counts = $stmt->fetch();
 
         echo json_encode([
@@ -485,9 +519,16 @@ switch ($action) {
         $stmt->execute([$school_id]);
         $groups = $stmt->fetchAll();
 
-        // Stats
-        $stmt = $pdo->prepare("SELECT COUNT(*) as total, SUM(has_voted) as voted FROM students WHERE school_id = ?");
-        $stmt->execute([$school_id]);
+        // Stats (candidates and votes matching election phase)
+        $stmt_status = $pdo->prepare("SELECT election_status FROM schools WHERE id = ?");
+        $stmt_status->execute([$school_id]);
+        $status = $stmt_status->fetchColumn() ?: 'not_started';
+        $is_mock = ($status === 'mock') ? 1 : 0;
+
+        $stmt = $pdo->prepare("SELECT 
+            (SELECT COUNT(*) FROM students WHERE school_id = ?) as total,
+            (SELECT COUNT(*) FROM votes WHERE school_id = ? AND is_mock = ?) as voted");
+        $stmt->execute([$school_id, $school_id, $is_mock]);
         $counts = $stmt->fetch();
 
         echo json_encode([
@@ -659,10 +700,6 @@ switch ($action) {
 
         try {
             $pdo->beginTransaction();
-            // Reset students voting status
-            $stmt = $pdo->prepare("UPDATE students SET has_voted = 0 WHERE school_id = ?");
-            $stmt->execute([$school_id]);
-
             // Clear all votes
             $stmt = $pdo->prepare("DELETE FROM votes WHERE school_id = ?");
             $stmt->execute([$school_id]);
@@ -700,18 +737,22 @@ switch ($action) {
         $stmt->execute([$is_mock, $req_school_id]);
         $candidates = $stmt->fetchAll();
 
-        // 2. Fetch voter turnout info
-        $stmt = $pdo->prepare("SELECT COUNT(*) as total_voters, SUM(has_voted) as casted_voters FROM students WHERE school_id = ?");
-        $stmt->execute([$req_school_id]);
-        $voter_stats = $stmt->fetch();
+        // 2. Fetch voter turnout info (candidates and votes)
+        $stmt_total = $pdo->prepare("SELECT COUNT(*) FROM students WHERE school_id = ?");
+        $stmt_total->execute([$req_school_id]);
+        $total_candidates = $stmt_total->fetchColumn();
+
+        $stmt_voted = $pdo->prepare("SELECT COUNT(*) FROM votes WHERE school_id = ? AND is_mock = ?");
+        $stmt_voted->execute([$req_school_id, $is_mock]);
+        $total_votes = $stmt_voted->fetchColumn();
 
         echo json_encode([
             'election_status' => $status,
             'is_mock' => $is_mock === 1,
             'candidates' => $candidates,
             'turnout' => [
-                'total' => intval($voter_stats['total_voters']),
-                'voted' => intval($voter_stats['casted_voters'])
+                'total' => intval($total_candidates),
+                'voted' => intval($total_votes)
             ]
         ]);
         break;
@@ -780,12 +821,11 @@ switch ($action) {
             $updated = 0;
 
             foreach ($rows as $row) {
-                $code = isset($row['student_code']) ? trim($row['student_code']) : '';
                 $name = isset($row['name']) ? trim($row['name']) : '';
                 $gender = isset($row['gender']) ? strtolower(trim($row['gender'])) : 'boy';
                 $group_name = isset($row['group_name']) ? trim($row['group_name']) : '';
 
-                if (empty($code) || empty($name) || empty($group_name)) {
+                if (empty($name) || empty($group_name)) {
                     continue; // Skip invalid rows
                 }
 
@@ -804,9 +844,15 @@ switch ($action) {
                 }
                 $group_id = $groups_map[$group_key];
 
-                $is_candidate = isset($row['is_candidate']) ? intval($row['is_candidate']) : 0;
-                $party_name = ($is_candidate && isset($row['party_name'])) ? trim($row['party_name']) : null;
-                $party_symbol = ($is_candidate && isset($row['party_symbol'])) ? trim($row['party_symbol']) : null;
+                $code = isset($row['student_code']) ? trim($row['student_code']) : '';
+                if (empty($code)) {
+                    $code = 'CAND_' . substr(md5($name . $group_id . $gender), 0, 8);
+                }
+
+                // In this flow, we only import candidates, so force is_candidate = 1
+                $is_candidate = 1;
+                $party_name = isset($row['party_name']) ? trim($row['party_name']) : null;
+                $party_symbol = isset($row['party_symbol']) ? trim($row['party_symbol']) : null;
 
                 // Check if student exists
                 $stmt_check_student->execute([$school_id, $code]);
@@ -936,53 +982,41 @@ switch ($action) {
     // --- STUDENT VOTING BOOTH ACTIONS ---
 
     case 'student_get_election_info':
-        requireRole(['student']);
+        requireRole(['booth']);
         requireNotLocked();
+
+        $active_group_id = $_SESSION['group_id'];
 
         // 1. Get election state
         $stmt = $pdo->prepare("SELECT election_status FROM schools WHERE id = ?");
         $stmt->execute([$school_id]);
         $status = $stmt->fetchColumn();
 
-        // 2. Fetch all groups that are visible for this school
-        $stmt = $pdo->prepare("SELECT * FROM groups WHERE school_id = ? AND is_visible = 1");
-        $stmt->execute([$school_id]);
-        $groups = $stmt->fetchAll();
+        // 2. Fetch the locked group details
+        $stmt = $pdo->prepare("SELECT * FROM groups WHERE id = ? AND school_id = ?");
+        $stmt->execute([$active_group_id, $school_id]);
+        $group = $stmt->fetch();
 
-        // 3. Fetch candidates grouped by group_id and gender
+        // 3. Fetch candidates for this group (boy/girl)
         $stmt = $pdo->prepare("
             SELECT id, name, gender, group_id, party_name, party_symbol 
             FROM students 
-            WHERE school_id = ? AND is_candidate = 1 
-            ORDER BY group_id, gender, name
+            WHERE school_id = ? AND group_id = ? AND is_candidate = 1 
+            ORDER BY gender, name
         ");
-        $stmt->execute([$school_id]);
+        $stmt->execute([$school_id, $active_group_id]);
         $candidates = $stmt->fetchAll();
 
         echo json_encode([
             'status' => $status,
-            'groups' => $groups,
-            'candidates' => $candidates,
-            'student_group_id' => $_SESSION['group_id']
+            'group' => $group,
+            'candidates' => $candidates
         ]);
         break;
 
     case 'student_cast_vote':
-        requireRole(['student']);
+        requireRole(['booth']);
         requireNotLocked();
-
-        $student_id_session = $_SESSION['student_id'];
-        
-        // Double-check if student already voted
-        $stmt = $pdo->prepare("SELECT has_voted FROM students WHERE id = ? AND school_id = ?");
-        $stmt->execute([$student_id_session, $school_id]);
-        $voted_status = $stmt->fetchColumn();
-
-        if ($voted_status) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Double voting blocked. You have already casted your vote.']);
-            exit;
-        }
 
         // Retrieve current election status
         $stmt = $pdo->prepare("SELECT election_status FROM schools WHERE id = ?");
@@ -1020,13 +1054,7 @@ switch ($action) {
                 }
             }
 
-            // Mark student as voted
-            $stmt_mark = $pdo->prepare("UPDATE students SET has_voted = 1 WHERE id = ?");
-            $stmt_mark->execute([$student_id_session]);
-
             $pdo->commit();
-            // Clear student session so they are logged out after casting vote
-            session_destroy();
             echo json_encode(['success' => true, 'message' => 'Vote casted successfully! Thank you for participating.']);
         } catch (Exception $e) {
             $pdo->rollBack();

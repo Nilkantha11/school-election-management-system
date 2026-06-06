@@ -77,7 +77,7 @@ function handleRouting() {
     targetView = 'teacher-view';
     loadTeacherDashboard();
   } else if (hash === '#vote') {
-    if (!state.currentUser || state.currentUser.role !== 'student') { window.location.hash = '#login'; return; }
+    if (!state.currentUser || state.currentUser.role !== 'booth') { window.location.hash = '#login'; return; }
     targetView = 'student-view';
     loadStudentVotingPortal();
   }
@@ -134,7 +134,7 @@ async function checkSession() {
       if (data.role === 'admin') window.location.hash = '#admin';
       else if (data.role === 'principal') window.location.hash = '#principal';
       else if (data.role === 'teacher') window.location.hash = '#teacher';
-      else if (data.role === 'student') window.location.hash = '#vote';
+      else if (data.role === 'booth') window.location.hash = '#vote';
     } else {
       state.currentUser = null;
       window.location.hash = '#login';
@@ -162,6 +162,14 @@ function initLoginTabs() {
       const role = tab.dataset.role;
       document.getElementById(`${role}-login-card`).classList.add('active-card');
       
+      // Reset booth UI state
+      const boothGroupContainer = document.getElementById('booth-group-selection-container');
+      if (boothGroupContainer) boothGroupContainer.classList.add('hidden');
+      const boothSubmitBtn = document.getElementById('btn-booth-submit');
+      if (boothSubmitBtn) boothSubmitBtn.textContent = 'Setup Booth';
+      const boothForm = document.getElementById('student-login-form');
+      if (boothForm) boothForm.reset();
+
       // Clear alert messages
       const alertBox = document.getElementById('login-message');
       alertBox.classList.add('hidden');
@@ -350,10 +358,16 @@ function initEventListeners() {
   document.getElementById('roster-filter-group').addEventListener('change', filterStudentsTable);
 
   document.getElementById('btn-add-student-modal').addEventListener('click', () => {
-    document.getElementById('student-modal-title').textContent = 'Add Student Record';
+    document.getElementById('student-modal-title').textContent = 'Add Candidate Record';
     document.getElementById('student-detail-form').reset();
     document.getElementById('edit-student-id').value = '';
-    document.getElementById('candidate-details-subpanel').classList.add('hidden');
+    
+    // In this flow, everyone added is a candidate
+    const studentCandidateCheckbox = document.getElementById('edit-student-candidate');
+    if (studentCandidateCheckbox) studentCandidateCheckbox.checked = true;
+    const subpanel = document.getElementById('candidate-details-subpanel');
+    if (subpanel) subpanel.classList.remove('hidden');
+    
     document.getElementById('party-symbol-preview').innerHTML = '🌟';
     document.getElementById('edit-candidate-symbol-path').value = '🌟';
     
@@ -413,7 +427,7 @@ function initEventListeners() {
       name: document.getElementById('edit-student-name').value,
       gender: document.getElementById('edit-student-gender').value,
       group_id: document.getElementById('edit-student-group').value,
-      is_candidate: document.getElementById('edit-student-candidate').checked ? 1 : 0,
+      is_candidate: 1, // Everyone standing for election is a candidate
       party_name: document.getElementById('edit-candidate-party').value,
       party_symbol: document.getElementById('edit-candidate-symbol-path').value
     };
@@ -469,13 +483,17 @@ function initEventListeners() {
 
   // --- STUDENT VOTING PORTAL EVENTS ---
   document.getElementById('btn-ballot-next').addEventListener('click', handleVotingNext);
-  document.getElementById('btn-ballot-prev').addEventListener('click', handleVotingPrev);
+  const prevBtn = document.getElementById('btn-ballot-prev');
+  if (prevBtn) prevBtn.addEventListener('click', handleVotingPrev);
   document.getElementById('btn-cast-final-vote').addEventListener('click', castSecureBallot);
-  document.getElementById('btn-vote-finish').addEventListener('click', () => {
-    closeModal('vote-success-modal');
-    state.currentUser = null;
-    window.location.hash = '#login';
-  });
+  const finishBtn = document.getElementById('btn-vote-finish');
+  if (finishBtn) {
+    finishBtn.addEventListener('click', () => {
+      closeModal('vote-success-modal');
+      state.currentUser = null;
+      window.location.hash = '#login';
+    });
+  }
 
   // Generic modal closes
   document.querySelectorAll('.modal-close').forEach(btn => {
@@ -507,8 +525,43 @@ async function handleRoleLogin(e, role) {
     payload.username = document.getElementById('teacher-username').value;
     payload.password = document.getElementById('teacher-password').value;
   } else if (role === 'student') {
-    payload.school_code = document.getElementById('student-school-code').value;
-    payload.student_code = document.getElementById('student-voter-id').value;
+    const schoolCode = document.getElementById('student-school-code').value;
+    const password = document.getElementById('student-voter-id').value;
+    const groupContainer = document.getElementById('booth-group-selection-container');
+    const selectGroup = document.getElementById('booth-select-group');
+    const submitBtn = document.getElementById('btn-booth-submit');
+
+    if (groupContainer.classList.contains('hidden')) {
+      // Stage 1: Authenticate and get groups
+      try {
+        const data = await apiPost('api.php?action=login', {
+          role: 'booth',
+          school_code: schoolCode,
+          password: password,
+          group_id: 0
+        });
+        if (data.success && data.requires_group) {
+          if (data.groups.length === 0) {
+            throw new Error('No active election groups configured. Please configure groups in the principal dashboard first.');
+          }
+          selectGroup.innerHTML = data.groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+          groupContainer.classList.remove('hidden');
+          submitBtn.textContent = 'Lock & Activate Booth';
+        }
+      } catch (err) {
+        showLoginError(err.message);
+      }
+      return;
+    } else {
+      // Stage 2: Lock booth to group
+      const groupId = selectGroup.value;
+      payload = {
+        role: 'booth',
+        school_code: schoolCode,
+        password: password,
+        group_id: groupId
+      };
+    }
   }
 
   try {
@@ -516,6 +569,12 @@ async function handleRoleLogin(e, role) {
     if (data.success) {
       // Clear forms
       e.target.reset();
+      if (role === 'student') {
+        const boothGroupContainer = document.getElementById('booth-group-selection-container');
+        if (boothGroupContainer) boothGroupContainer.classList.add('hidden');
+        const boothSubmitBtn = document.getElementById('btn-booth-submit');
+        if (boothSubmitBtn) boothSubmitBtn.textContent = 'Setup Booth';
+      }
       checkSession();
     }
   } catch (err) {
@@ -960,18 +1019,19 @@ function openEditStudent(id) {
   const student = state.students.find(s => s.id == id);
   if (!student) return;
 
-  document.getElementById('student-modal-title').textContent = 'Edit Student Record';
+  document.getElementById('student-modal-title').textContent = 'Edit Candidate Record';
   document.getElementById('edit-student-id').value = student.id;
   document.getElementById('edit-student-code').value = student.student_code;
   document.getElementById('edit-student-name').value = student.name;
   document.getElementById('edit-student-gender').value = student.gender;
   document.getElementById('edit-student-group').value = student.group_id;
 
-  const isCandidate = student.is_candidate == 1;
-  document.getElementById('edit-student-candidate').checked = isCandidate;
+  const isCandidate = true; // In this flow everyone is a candidate
+  const studentCandidateCheckbox = document.getElementById('edit-student-candidate');
+  if (studentCandidateCheckbox) studentCandidateCheckbox.checked = isCandidate;
 
   const subpanel = document.getElementById('candidate-details-subpanel');
-  if (isCandidate) {
+  if (subpanel) {
     subpanel.classList.remove('hidden');
     document.getElementById('edit-candidate-party').value = student.party_name || '';
     
@@ -986,11 +1046,6 @@ function openEditStudent(id) {
     } else {
       document.getElementById('party-symbol-preview').innerHTML = `<img src="${symbol}" alt="symbol">`;
     }
-  } else {
-    subpanel.classList.add('hidden');
-    document.getElementById('edit-candidate-party').value = '';
-    document.getElementById('edit-candidate-symbol-path').value = '🌟';
-    document.getElementById('party-symbol-preview').innerHTML = '🌟';
   }
 
   openModal('student-form-modal');
@@ -1019,37 +1074,37 @@ function handleExcelImport(file) {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       
-      // Assume first sheet contains students list
-      const firstSheet = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheet];
-      const rows = XLSX.utils.sheet_to_json(sheet);
-
-      if (rows.length === 0) {
-        alert('The uploaded Excel sheet contains no rows.');
-        return;
-      }
-
-      // Convert spreadsheet columns dynamically (case-insensitive keys mapping)
-      const formatted = rows.map(r => {
-        // Find keys case-insensitively
-        const findVal = (listKeys) => {
-          const matchedKey = Object.keys(r).find(k => listKeys.includes(k.toLowerCase().replace(/[\s_-]/g, '')));
-          return matchedKey ? r[matchedKey] : null;
-        };
-
-        return {
-          student_code: findVal(['studentcode', 'rollnumber', 'rollno', 'id', 'student_code']),
-          name: findVal(['name', 'fullname', 'studentname']),
-          gender: findVal(['gender', 'sex']),
-          group_name: findVal(['group', 'house', 'groupname', 'housename']),
-          is_candidate: findVal(['iscandidate', 'candidate', 'standing']),
-          party_name: findVal(['partyname', 'party']),
-          party_symbol: findVal(['partysymbol', 'symbol'])
-        };
-      }).filter(item => item.student_code && item.name && item.group_name);
+      const formatted = [];
+      workbook.SheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+        if (rows.length === 0) return;
+        
+        rows.forEach(r => {
+          // Find keys case-insensitively
+          const findVal = (listKeys) => {
+            const matchedKey = Object.keys(r).find(k => listKeys.includes(k.toLowerCase().replace(/[\s_-]/g, '')));
+            return matchedKey ? r[matchedKey] : null;
+          };
+          
+          const name = findVal(['name', 'fullname', 'candidatename', 'studentname']);
+          const gender = findVal(['gender', 'sex']);
+          if (name) {
+            formatted.push({
+              student_code: findVal(['studentcode', 'rollnumber', 'rollno', 'id', 'student_code']) || '',
+              name: name,
+              gender: gender ? gender.toLowerCase().trim() : 'boy',
+              group_name: sheetName, // The sheet name represents the group name
+              is_candidate: 1,
+              party_name: findVal(['partyname', 'party']) || '',
+              party_symbol: findVal(['partysymbol', 'symbol']) || ''
+            });
+          }
+        });
+      });
 
       if (formatted.length === 0) {
-        alert('Invalid spreadsheet layout. Please ensure student_code, name, and group_name columns are present.');
+        alert('Invalid spreadsheet layout. Please ensure your Excel sheets contain Name and Gender columns.');
         return;
       }
 
@@ -1089,51 +1144,26 @@ function exportStudentsToExcel() {
 }
 
 function downloadExcelTemplate() {
-  // Generates dummy template file
-  const templateData = [
-    {
-      'student_code': 'STU001',
-      'name': 'John Doe',
-      'gender': 'boy',
-      'group_name': 'Red House',
-      'is_candidate': 1,
-      'party_name': 'Victory Stars',
-      'party_symbol': '🌟'
-    },
-    {
-      'student_code': 'STU002',
-      'name': 'Sarah Smith',
-      'gender': 'girl',
-      'group_name': 'Red House',
-      'is_candidate': 0,
-      'party_name': '',
-      'party_symbol': ''
-    },
-    {
-      'student_code': 'STU003',
-      'name': 'David Miller',
-      'gender': 'boy',
-      'group_name': 'Blue House',
-      'is_candidate': 1,
-      'party_name': 'Future Pioneers',
-      'party_symbol': '🚀'
-    },
-    {
-      'student_code': 'STU004',
-      'name': 'Emma Davis',
-      'gender': 'girl',
-      'group_name': 'Head Boy & Girl',
-      'is_candidate': 1,
-      'party_name': 'Democratic Youth',
-      'party_symbol': '🦁'
-    }
-  ];
-
-  const worksheet = XLSX.utils.json_to_sheet(templateData);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Import Template');
-
-  XLSX.writeFile(workbook, 'DemocraSchools_Import_Template.xlsx');
+  
+  const redHouseData = [
+    { 'Name': 'John Doe', 'Gender': 'boy', 'Party Name': 'Victory Stars', 'Party Symbol': '🌟' },
+    { 'Name': 'Sarah Smith', 'Gender': 'girl', 'Party Name': 'Victory Stars', 'Party Symbol': '🌟' }
+  ];
+  const blueHouseData = [
+    { 'Name': 'David Miller', 'Gender': 'boy', 'Party Name': 'Future Pioneers', 'Party Symbol': '🚀' },
+    { 'Name': 'Emma Davis', 'Gender': 'girl', 'Party Name': 'Future Pioneers', 'Party Symbol': '🚀' }
+  ];
+  const headPositionData = [
+    { 'Name': 'Robert Johnson', 'Gender': 'boy', 'Party Name': 'Democratic Youth', 'Party Symbol': '🦁' },
+    { 'Name': 'Patricia Brown', 'Gender': 'girl', 'Party Name': 'Democratic Youth', 'Party Symbol': '🦁' }
+  ];
+  
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(redHouseData), 'Red House');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(blueHouseData), 'Blue House');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(headPositionData), 'Head Position');
+  
+  XLSX.writeFile(workbook, 'DemocraSchools_Candidates_Template.xlsx');
 }
 
 /**
@@ -1186,39 +1216,68 @@ function renderSandboxCandidates() {
 /**
  * Student Voting Portal Core Wizard
  */
+function playChime() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.6);
+  } catch (e) {
+    console.error('AudioContext chime failed:', e);
+  }
+}
+
+function speakThankYou() {
+  try {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Cancel any ongoing speech
+      const utterance = new SpeechSynthesisUtterance("Thank you for voting!");
+      utterance.rate = 1.0;
+      utterance.pitch = 1.1;
+      window.speechSynthesis.speak(utterance);
+    }
+  } catch (e) {
+    console.error('SpeechSynthesis failed:', e);
+  }
+}
+
+/**
+ * Student Voting Portal Core Wizard (Booth Locked Group Flow)
+ */
 async function loadStudentVotingPortal() {
   try {
     const data = await apiGet('api.php?action=student_get_election_info');
     state.electionInfo = data;
 
-    // Resolve active voting groups for this student
-    // Standard houses logic: Students can only vote in THEIR OWN house, plus all Head and Sport groups.
-    // Filter groups where is_visible = 1, AND if type is 'house', it must match the student's assigned group!
-    state.activeGroups = data.groups.filter(g => {
-      if (g.type === 'house') {
-        return g.id == data.student_group_id;
-      }
-      return true; // Head and Sport groups are visible to everyone
-    });
-
-    if (state.activeGroups.length === 0) {
-      alert('Error: There are no active election groups available for your account.');
+    if (!data.group) {
+      alert('Error: This booth is not assigned to any active election group.');
       window.location.hash = '#login';
       return;
     }
 
+    // Resolve active voting groups for this booth (only 1 locked group)
+    state.activeGroups = [data.group];
+
     // Set voter welcome headers
-    document.getElementById('voter-welcome-name').textContent = `Welcome, ${state.currentUser.username}`;
-    document.getElementById('voter-welcome-info').textContent = `${state.currentUser.student.group_name} | ID: ${state.currentUser.student.student_code}`;
+    const schoolName = (state.currentUser && state.currentUser.school) ? state.currentUser.school.name : 'School Election';
+    const groupName = (state.currentUser && state.currentUser.group_name) ? state.currentUser.group_name : 'Voting Booth';
+    document.getElementById('voter-welcome-name').textContent = schoolName;
+    document.getElementById('voter-welcome-info').textContent = `Active Booth: ${groupName}`;
 
     // Reset wizard steps
     state.votingStep = 0;
     state.votingSelections = {};
     
     // Initialize selections map
-    state.activeGroups.forEach(g => {
-      state.votingSelections[g.id] = { boy: null, girl: null };
-    });
+    state.votingSelections[data.group.id] = { boy: null, girl: null };
 
     renderVotingStep();
   } catch (err) {
@@ -1232,14 +1291,16 @@ function renderVotingStep() {
   if (!currentGroup) return;
 
   // Title displays
-  document.getElementById('voting-step-indicator').textContent = `Step ${state.votingStep + 1} of ${state.activeGroups.length}`;
+  document.getElementById('voting-step-indicator').textContent = 'Active Booth';
   
-  // Progress bar
-  const progressPercent = Math.round(((state.votingStep) / state.activeGroups.length) * 100);
-  document.getElementById('voting-progress-fill').style.width = `${progressPercent}%`;
+  // Progress bar is removed, check if element exists before style access
+  const progressFill = document.getElementById('voting-progress-fill');
+  if (progressFill) {
+    progressFill.style.width = '100%';
+  }
 
   document.getElementById('ballot-group-heading').textContent = currentGroup.name;
-  document.getElementById('ballot-group-subheading').textContent = `Select 1 Boy and 1 Girl candidate for the position of ${currentGroup.name}.`;
+  document.getElementById('ballot-group-subheading').textContent = `Select 1 boy candidate and 1 girl candidate from the list below.`;
 
   // Render Candidates Column
   const boysContainer = document.getElementById('ballot-boys-container');
@@ -1294,19 +1355,23 @@ function renderVotingStep() {
 
   // Update button layouts
   const prevBtn = document.getElementById('btn-ballot-prev');
-  if (state.votingStep === 0) {
-    prevBtn.disabled = true;
-    prevBtn.className = 'launch-btn disabled-btn';
-  } else {
-    prevBtn.disabled = false;
-    prevBtn.className = 'launch-btn';
+  if (prevBtn) {
+    if (state.votingStep === 0) {
+      prevBtn.disabled = true;
+      prevBtn.className = 'launch-btn disabled-btn';
+    } else {
+      prevBtn.disabled = false;
+      prevBtn.className = 'launch-btn';
+    }
   }
 
   const nextBtn = document.getElementById('btn-ballot-next');
-  if (state.votingStep === state.activeGroups.length - 1) {
-    nextBtn.textContent = 'Review & Cast Ballot';
-  } else {
-    nextBtn.textContent = 'Next Section';
+  if (nextBtn) {
+    if (state.votingStep === state.activeGroups.length - 1) {
+      nextBtn.textContent = 'Review & Cast Ballot';
+    } else {
+      nextBtn.textContent = 'Next Section';
+    }
   }
 }
 
@@ -1404,6 +1469,32 @@ async function castSecureBallot() {
       
       // Explosion confetti effects!
       triggerConfetti();
+
+      // Play audio engine sounds
+      playChime();
+      speakThankYou();
+
+      // Start 3-second automatic reset countdown
+      let countdown = 3;
+      const countdownMsg = document.getElementById('success-countdown-message');
+      if (countdownMsg) {
+        countdownMsg.textContent = `This booth will reset in ${countdown} seconds for the next voter...`;
+      }
+      
+      const interval = setInterval(() => {
+        countdown--;
+        if (countdownMsg) {
+          countdownMsg.textContent = `This booth will reset in ${countdown} seconds for the next voter...`;
+        }
+        if (countdown <= 0) {
+          clearInterval(interval);
+          closeModal('vote-success-modal');
+          // Clear selections and reload voting booth
+          state.votingSelections = {};
+          loadStudentVotingPortal();
+        }
+      }, 1000);
+
     } catch (err) {
       alert(err.message);
       buttonsRow.classList.remove('hidden');

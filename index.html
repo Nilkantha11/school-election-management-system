@@ -839,17 +839,49 @@
           </div>
         </div>
 
-        <!-- Success View -->
-        <div id="vote-success-modal" class="modal-backdrop hidden">
-          <div class="modal-container text-center">
-            <div class="modal-body padding-40">
-              <div class="success-icon-avatar">✓</div>
-              <h2 class="margin-top-20">Vote Casted Successfully!</h2>
-              <p class="description margin-top-10">Your vote has been recorded anonymously and securely.</p>
-              <p id="success-countdown-message" class="text-warning margin-top-20 font-weight-bold" style="font-size:0.9rem;">This booth will reset in 3 seconds for the next voter...</p>
+        <!-- Vote Success & Next Voter Handoff Screen -->
+        <div id="vote-success-modal" class="modal-backdrop hidden" style="z-index:9999;">
+          <div class="handoff-screen">
+
+            <!-- Phase 1: Thank You (shown first) -->
+            <div id="handoff-phase-thankyou" class="handoff-phase">
+              <div class="handoff-checkmark-ring">
+                <div class="handoff-checkmark">✓</div>
+              </div>
+              <h1 class="handoff-title-big">Vote Cast!</h1>
+              <p class="handoff-subtitle">Your vote has been recorded <strong>securely & anonymously</strong>.</p>
+              <div class="handoff-divider"></div>
+              <p class="handoff-step-away">
+                🙏 Please <strong>step away</strong> from the booth<br>and allow the next student to vote.
+              </p>
+              <div class="handoff-countdown-wrap">
+                <div class="handoff-countdown-ring">
+                  <svg class="countdown-svg" viewBox="0 0 100 100">
+                    <circle class="countdown-track" cx="50" cy="50" r="44"/>
+                    <circle class="countdown-progress" id="handoff-svg-circle" cx="50" cy="50" r="44"/>
+                  </svg>
+                  <span class="handoff-countdown-number" id="handoff-countdown-num">5</span>
+                </div>
+                <p class="handoff-countdown-label">seconds before booth resets</p>
+              </div>
             </div>
+
+            <!-- Phase 2: Next Voter Call (shown after countdown) -->
+            <div id="handoff-phase-next" class="handoff-phase hidden">
+              <div class="next-voter-pulse">
+                <span class="next-voter-arrow">👤</span>
+              </div>
+              <h1 class="handoff-next-title">Next Voter</h1>
+              <h2 class="handoff-next-subtitle">Please Come Forward</h2>
+              <p class="handoff-next-hint">Step up to the booth and enter your Roll Number to vote.</p>
+              <button id="btn-handoff-start-next" class="action-btn blue-glow-btn handoff-start-btn">
+                ▶ Start Voting
+              </button>
+            </div>
+
           </div>
         </div>
+
       </section>
 
     </main>

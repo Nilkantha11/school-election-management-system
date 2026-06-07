@@ -1553,24 +1553,44 @@ async function castSecureBallot() {
       playChime();
       speakThankYou();
 
-      // Start 3-second automatic reset countdown
-      let countdown = 3;
-      const countdownMsg = document.getElementById('success-countdown-message');
-      if (countdownMsg) {
-        countdownMsg.textContent = `This booth will reset in ${countdown} seconds for the next voter...`;
+      // ─── PHASE 1: Thank You countdown (5 seconds) ─────────────────────────
+      const phaseThankYou = document.getElementById('handoff-phase-thankyou');
+      const phaseNext     = document.getElementById('handoff-phase-next');
+      const countdownNum  = document.getElementById('handoff-countdown-num');
+      const svgCircle     = document.getElementById('handoff-svg-circle');
+
+      // SVG ring setup: circumference = 2 * π * r = 2 * π * 44 ≈ 276.5
+      const CIRC = 2 * Math.PI * 44;
+      if (svgCircle) {
+        svgCircle.style.strokeDasharray  = CIRC;
+        svgCircle.style.strokeDashoffset = 0;
       }
-      
-      const interval = setInterval(() => {
-        countdown--;
-        if (countdownMsg) {
-          countdownMsg.textContent = `This booth will reset in ${countdown} seconds for the next voter...`;
+
+      phaseThankYou.classList.remove('hidden');
+      phaseNext.classList.add('hidden');
+
+      let secondsLeft = 5;
+      if (countdownNum) countdownNum.textContent = secondsLeft;
+
+      const handoffInterval = setInterval(() => {
+        secondsLeft--;
+        if (countdownNum) countdownNum.textContent = secondsLeft;
+
+        // Animate SVG ring depleting
+        if (svgCircle) {
+          const offset = CIRC * (1 - secondsLeft / 5);
+          svgCircle.style.strokeDashoffset = offset;
         }
-        if (countdown <= 0) {
-          clearInterval(interval);
-          closeModal('vote-success-modal');
-          // Clear selections and reload voting booth
-          state.votingSelections = {};
-          loadStudentVotingPortal();
+
+        if (secondsLeft <= 0) {
+          clearInterval(handoffInterval);
+
+          // ─── PHASE 2: Next Voter screen ─────────────────────────────────
+          phaseThankYou.classList.add('hidden');
+          phaseNext.classList.remove('hidden');
+
+          // Second confetti burst welcoming next voter
+          setTimeout(() => triggerConfetti(), 300);
         }
       }, 1000);
 
@@ -1581,6 +1601,34 @@ async function castSecureBallot() {
     }
   }, 900);
 }
+
+// "Start Voting" button on the Next Voter handoff screen resets the booth
+document.addEventListener('DOMContentLoaded', () => {
+  const startNextBtn = document.getElementById('btn-handoff-start-next');
+  if (startNextBtn) {
+    startNextBtn.addEventListener('click', () => {
+      closeModal('vote-success-modal');
+
+      // Reset phase states for next use
+      const phaseThankYou = document.getElementById('handoff-phase-thankyou');
+      const phaseNext     = document.getElementById('handoff-phase-next');
+      if (phaseThankYou) phaseThankYou.classList.remove('hidden');
+      if (phaseNext)     phaseNext.classList.add('hidden');
+
+      // Reset SVG ring
+      const svgCircle = document.getElementById('handoff-svg-circle');
+      if (svgCircle) {
+        const CIRC = 2 * Math.PI * 44;
+        svgCircle.style.strokeDashoffset = 0;
+      }
+
+      // Clear selections and reload voting booth
+      state.votingSelections = {};
+      loadStudentVotingPortal();
+    });
+  }
+});
+
 
 function triggerConfetti() {
   if (typeof confetti === 'function') {

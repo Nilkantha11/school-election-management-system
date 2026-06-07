@@ -269,6 +269,25 @@ function initEventListeners() {
     await fetch('api.php?action=logout');
     state.currentUser = null;
     window.location.hash = '#login';
+    handleRouting();
+  });
+
+  // ── Voting Booth: Stop Voting (Teacher Logout) ──────────────────────────
+  document.getElementById('btn-stop-voting').addEventListener('click', () => {
+    openModal('stop-voting-modal');
+  });
+
+  document.getElementById('btn-stop-cancel').addEventListener('click', () => {
+    closeModal('stop-voting-modal');
+  });
+
+  document.getElementById('btn-stop-confirm').addEventListener('click', async () => {
+    closeModal('stop-voting-modal');
+    await fetch('api.php?action=logout');
+    state.currentUser = null;
+    state.votingSelections = {};
+    window.location.hash = '#login';
+    handleRouting();
   });
 
   // --- SUPER ADMIN EVENTS ---

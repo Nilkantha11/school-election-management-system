@@ -769,7 +769,37 @@
             <h1 id="voter-welcome-name">School Election</h1>
             <p id="voter-welcome-info">Active Booth: Loading...</p>
           </div>
-          <div class="voter-timer" id="voting-step-indicator">Active Booth</div>
+          <div class="booth-header-right">
+            <div class="voter-timer" id="voting-step-indicator">Active Booth</div>
+            <button id="btn-stop-voting" class="stop-voting-btn" title="Teachers Only: Stop voting session">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Stop Voting
+            </button>
+          </div>
+        </div>
+
+        <!-- Stop Voting Confirmation Modal -->
+        <div id="stop-voting-modal" class="modal-backdrop hidden" style="z-index:10001;">
+          <div class="modal-container small-modal" style="max-width:400px;">
+            <div class="modal-body" style="text-align:center; padding: 32px 24px;">
+              <div style="font-size:3rem; margin-bottom:12px;">🔒</div>
+              <h2 style="font-size:1.3rem; margin-bottom:8px;">Stop Voting Session?</h2>
+              <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:24px; line-height:1.6;">
+                This will <strong>end the current booth session</strong> and return to the login screen.<br>
+                <span style="color:#f87171;">Only teachers should do this.</span>
+              </p>
+              <div style="display:flex; gap:12px; justify-content:center;">
+                <button id="btn-stop-cancel" class="launch-btn disabled-btn" style="padding:10px 24px;">
+                  Cancel
+                </button>
+                <button id="btn-stop-confirm" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#b91c1c); padding:10px 24px;">
+                  Yes, Stop &amp; Logout
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Active Category Container -->

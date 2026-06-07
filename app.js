@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initRouter();
   initLoginTabs();
   initEventListeners();
+  // Trigger initial routing once (handles empty hash on fresh load)
+  handleRouting();
   checkSession();
 });
 
@@ -122,6 +124,7 @@ async function checkSession() {
       // Configuration required
       state.configured = false;
       window.location.hash = '#setup';
+      handleRouting();
       return;
     }
 
@@ -130,19 +133,32 @@ async function checkSession() {
     
     if (data.logged_in) {
       state.currentUser = data;
-      // Route based on role
-      if (data.role === 'admin') window.location.hash = '#admin';
-      else if (data.role === 'principal') window.location.hash = '#principal';
-      else if (data.role === 'teacher') window.location.hash = '#teacher';
-      else if (data.role === 'booth') window.location.hash = '#vote';
+      // Route based on role — use hash set + explicit call to handle
+      // the case where hash hasn't changed (no hashchange event fires)
+      if (data.role === 'admin') {
+        window.location.hash = '#admin';
+        handleRouting();
+      } else if (data.role === 'principal') {
+        window.location.hash = '#principal';
+        handleRouting();
+      } else if (data.role === 'teacher') {
+        window.location.hash = '#teacher';
+        handleRouting();
+      } else if (data.role === 'booth') {
+        window.location.hash = '#vote';
+        handleRouting();
+      }
     } else {
       state.currentUser = null;
       window.location.hash = '#login';
+      // Always call handleRouting explicitly — hash may not have changed
+      handleRouting();
     }
   } catch (err) {
     console.error('Session verify failed:', err);
     state.configured = false;
     window.location.hash = '#setup';
+    handleRouting();
   }
 }
 

@@ -662,6 +662,29 @@
                 </div>
 
                 <div id="candidate-details-subpanel" class="candidate-subpanel hidden">
+                  <!-- Candidate Photo Upload -->
+                  <div class="form-group candidate-photo-upload-group">
+                    <label>Candidate Photo <span class="label-hint">(Upload from symbols folder)</span></label>
+                    <div class="photo-upload-area" id="candidate-photo-upload-area">
+                      <div class="photo-preview-wrap">
+                        <div class="candidate-photo-preview" id="candidate-photo-preview">
+                          <span class="photo-placeholder-icon">👤</span>
+                          <span class="photo-placeholder-text">No photo</span>
+                        </div>
+                      </div>
+                      <div class="photo-upload-controls">
+                        <label for="edit-candidate-photo-file" class="action-btn small-btn upload-photo-btn">
+                          📁 Choose Photo
+                        </label>
+                        <input type="file" id="edit-candidate-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+                        <button type="button" class="action-btn small-btn danger-btn" id="btn-clear-candidate-photo" style="display:none">✕ Remove</button>
+                        <p class="photo-hint">JPG, PNG, GIF, WEBP · Max 2MB<br>Saved to <code>symbols/</code> folder</p>
+                      </div>
+                    </div>
+                    <input type="hidden" id="edit-candidate-photo-path">
+                    <div id="photo-upload-status" class="upload-status-msg" style="display:none"></div>
+                  </div>
+
                   <div class="form-grid">
                     <div class="form-group">
                       <label for="edit-candidate-party">Party Name</label>

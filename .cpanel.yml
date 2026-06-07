@@ -7,5 +7,5 @@ deployment:
     - /bin/cp app.js $DEPLOYPATH
     - /bin/cp api.php $DEPLOYPATH
     - /bin/cp db_setup.php $DEPLOYPATH
-    - /bin/mkdir -p $DEPLOYPATH/uploads
-    - /bin/chmod 777 $DEPLOYPATH/uploads
+    - /bin/mkdir -p $DEPLOYPATH/symbols
+    - /bin/chmod 777 $DEPLOYPATH/symbols

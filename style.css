@@ -1552,3 +1552,202 @@ body {
     width: 100%;
   }
 }
+
+/* =====================================================
+   CANDIDATE PHOTO UPLOAD (symbols/ folder)
+   ===================================================== */
+
+.candidate-photo-upload-group {
+  margin-bottom: 16px;
+}
+
+.candidate-photo-upload-group > label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.label-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.photo-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: rgba(255,255,255,0.02);
+  border: 1.5px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: border-color 0.2s;
+}
+
+.photo-upload-area:hover {
+  border-color: var(--blue-text);
+}
+
+.photo-preview-wrap {
+  flex-shrink: 0;
+}
+
+.candidate-photo-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  gap: 4px;
+}
+
+.candidate-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.photo-placeholder-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.photo-placeholder-text {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.photo-upload-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.small-btn {
+  padding: 6px 14px;
+  font-size: 0.78rem;
+}
+
+.danger-btn {
+  background: rgba(248, 113, 113, 0.12) !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
+  color: #f87171 !important;
+}
+
+.danger-btn:hover {
+  background: rgba(248, 113, 113, 0.2) !important;
+}
+
+.photo-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.photo-hint code {
+  background: rgba(255,255,255,0.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--blue-text);
+}
+
+.upload-status-msg {
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+}
+
+.upload-status-msg.uploading {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+}
+
+.upload-status-msg.success {
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+}
+
+.upload-status-msg.error {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+}
+
+/* =====================================================
+   CANDIDATE PHOTO — TILE CARD (Sandbox & Preview)
+   ===================================================== */
+
+.candidate-tile-photo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.candidate-tile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.candidate-tile-photo.placeholder {
+  font-size: 1.8rem;
+}
+
+/* =====================================================
+   CANDIDATE PHOTO — VOTE ROW (Ballot)
+   ===================================================== */
+
+.vote-row-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vote-row-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vote-row-photo.placeholder {
+  font-size: 1.4rem;
+}
+
+.candidate-vote-row.selected .vote-row-photo {
+  border-color: var(--blue-text);
+  box-shadow: 0 0 8px rgba(96,165,250,0.3);
+}

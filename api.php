@@ -53,6 +53,18 @@ if (!file_exists(__DIR__ . '/uploads')) {
     mkdir(__DIR__ . '/uploads', 0755, true);
 }
 
+// Ensure symbols folder exists (candidate photos)
+if (!file_exists(__DIR__ . '/symbols')) {
+    mkdir(__DIR__ . '/symbols', 0755, true);
+}
+
+// Auto-migrate: add candidate_photo column if it doesn't exist
+try {
+    $pdo->query("ALTER TABLE `students` ADD COLUMN `candidate_photo` VARCHAR(255) DEFAULT NULL");
+} catch (PDOException $e) {
+    // Column already exists, ignore
+}
+
 // 2. Helper Functions
 
 // Check if a school is locked (after 30 days of creation or expires_at)
@@ -727,7 +739,7 @@ switch ($action) {
         $is_mock = ($status === 'mock') ? 1 : 0;
 
         $stmt = $pdo->prepare("
-            SELECT s.id as candidate_id, s.name, s.gender, s.party_name, s.party_symbol, g.name as group_name, g.type as group_type, g.id as group_id,
+            SELECT s.id as candidate_id, s.name, s.gender, s.party_name, s.party_symbol, s.candidate_photo, g.name as group_name, g.type as group_type, g.id as group_id,
             (SELECT COUNT(*) FROM votes v WHERE v.candidate_id = s.id AND v.is_mock = ?) as vote_count
             FROM students s 
             JOIN groups g ON s.group_id = g.id 
@@ -807,13 +819,13 @@ switch ($action) {
             
             $stmt_insert_student = $pdo->prepare("
                 INSERT INTO students 
-                (school_id, student_code, name, gender, group_id, is_candidate, party_name, party_symbol) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (school_id, student_code, name, gender, group_id, is_candidate, party_name, party_symbol, candidate_photo) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt_update_student = $pdo->prepare("
                 UPDATE students SET 
-                name = ?, gender = ?, group_id = ?, is_candidate = ?, party_name = ?, party_symbol = ?
+                name = ?, gender = ?, group_id = ?, is_candidate = ?, party_name = ?, party_symbol = ?, candidate_photo = ?
                 WHERE school_id = ? AND student_code = ?
             ");
 
@@ -853,6 +865,7 @@ switch ($action) {
                 $is_candidate = 1;
                 $party_name = isset($row['party_name']) ? trim($row['party_name']) : null;
                 $party_symbol = isset($row['party_symbol']) ? trim($row['party_symbol']) : null;
+                $candidate_photo = isset($row['candidate_photo']) ? trim($row['candidate_photo']) : null;
 
                 // Check if student exists
                 $stmt_check_student->execute([$school_id, $code]);
@@ -860,13 +873,13 @@ switch ($action) {
 
                 if ($existing) {
                     $stmt_update_student->execute([
-                        $name, $gender, $group_id, $is_candidate, $party_name, $party_symbol,
+                        $name, $gender, $group_id, $is_candidate, $party_name, $party_symbol, $candidate_photo,
                         $school_id, $code
                     ]);
                     $updated++;
                 } else {
                     $stmt_insert_student->execute([
-                        $school_id, $code, $name, $gender, $group_id, $is_candidate, $party_name, $party_symbol
+                        $school_id, $code, $name, $gender, $group_id, $is_candidate, $party_name, $party_symbol, $candidate_photo
                     ]);
                     $imported++;
                 }
@@ -893,6 +906,7 @@ switch ($action) {
         $is_candidate = isset($input['is_candidate']) ? intval($input['is_candidate']) : 0;
         $party_name = $is_candidate ? trim($input['party_name']) : null;
         $party_symbol = $is_candidate ? trim($input['party_symbol']) : null;
+        $candidate_photo = isset($input['candidate_photo']) ? trim($input['candidate_photo']) : null;
 
         if ($id <= 0 || empty($student_code) || empty($name) || $group_id <= 0) {
             http_response_code(400);
@@ -920,11 +934,11 @@ switch ($action) {
 
         $stmt = $pdo->prepare("
             UPDATE students SET 
-            student_code = ?, name = ?, gender = ?, group_id = ?, is_candidate = ?, party_name = ?, party_symbol = ?
+            student_code = ?, name = ?, gender = ?, group_id = ?, is_candidate = ?, party_name = ?, party_symbol = ?, candidate_photo = ?
             WHERE id = ? AND school_id = ?
         ");
         $stmt->execute([
-            $student_code, $name, $gender, $group_id, $is_candidate, $party_name, $party_symbol, $id, $school_id
+            $student_code, $name, $gender, $group_id, $is_candidate, $party_name, $party_symbol, $candidate_photo, $id, $school_id
         ]);
 
         echo json_encode(['success' => true, 'message' => 'Student record updated successfully.']);
@@ -943,6 +957,46 @@ switch ($action) {
         } else {
             http_response_code(404);
             echo json_encode(['error' => 'Student not found in this school records.']);
+        }
+        break;
+
+    case 'teacher_upload_candidate_photo':
+        requireRole(['teacher']);
+        requireNotLocked();
+
+        if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+            http_response_code(400);
+            echo json_encode(['error' => 'No image file uploaded or upload error.']);
+            exit;
+        }
+
+        $file = $_FILES['photo'];
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!in_array($file['type'], $allowed_types)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid format. Only JPG, PNG, GIF, WEBP allowed.']);
+            exit;
+        }
+
+        // Max 2MB
+        if ($file['size'] > 2 * 1024 * 1024) {
+            http_response_code(400);
+            echo json_encode(['error' => 'File too large. Maximum 2MB allowed.']);
+            exit;
+        }
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $clean_filename = 'photo_' . uniqid() . '.' . $ext;
+        $dest = __DIR__ . '/symbols/' . $clean_filename;
+
+        if (move_uploaded_file($file['tmp_name'], $dest)) {
+            echo json_encode([
+                'success' => true,
+                'path' => 'symbols/' . $clean_filename
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to save photo. Check symbols folder permissions.']);
         }
         break;
 
@@ -999,7 +1053,7 @@ switch ($action) {
 
         // 3. Fetch candidates for this group (boy/girl)
         $stmt = $pdo->prepare("
-            SELECT id, name, gender, group_id, party_name, party_symbol 
+            SELECT id, name, gender, group_id, party_name, party_symbol, candidate_photo 
             FROM students 
             WHERE school_id = ? AND group_id = ? AND is_candidate = 1 
             ORDER BY gender, name

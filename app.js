@@ -417,6 +417,50 @@ function initEventListeners() {
     }
   });
 
+  // Candidate Photo Upload (saves to symbols/ folder)
+  document.getElementById('edit-candidate-photo-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('photo-upload-status');
+    statusEl.style.display = 'block';
+    statusEl.className = 'upload-status-msg uploading';
+    statusEl.textContent = '⏳ Uploading photo...';
+
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    try {
+      const res = await fetch('api.php?action=teacher_upload_candidate_photo', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Show preview
+      const preview = document.getElementById('candidate-photo-preview');
+      preview.innerHTML = `<img src="${data.path}" alt="Candidate Photo">`;
+      document.getElementById('edit-candidate-photo-path').value = data.path;
+      document.getElementById('btn-clear-candidate-photo').style.display = 'inline-flex';
+
+      statusEl.className = 'upload-status-msg success';
+      statusEl.textContent = '✅ Photo uploaded to symbols/ folder!';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    } catch (err) {
+      statusEl.className = 'upload-status-msg error';
+      statusEl.textContent = '❌ Upload failed: ' + err.message;
+    }
+  });
+
+  // Clear candidate photo
+  document.getElementById('btn-clear-candidate-photo').addEventListener('click', () => {
+    document.getElementById('candidate-photo-preview').innerHTML = `<span class="photo-placeholder-icon">👤</span><span class="photo-placeholder-text">No photo</span>`;
+    document.getElementById('edit-candidate-photo-path').value = '';
+    document.getElementById('edit-candidate-photo-file').value = '';
+    document.getElementById('btn-clear-candidate-photo').style.display = 'none';
+  });
+
   // Student Detail Form Submit (Create & Update)
   document.getElementById('student-detail-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -429,7 +473,8 @@ function initEventListeners() {
       group_id: document.getElementById('edit-student-group').value,
       is_candidate: 1, // Everyone standing for election is a candidate
       party_name: document.getElementById('edit-candidate-party').value,
-      party_symbol: document.getElementById('edit-candidate-symbol-path').value
+      party_symbol: document.getElementById('edit-candidate-symbol-path').value,
+      candidate_photo: document.getElementById('edit-candidate-photo-path').value
     };
 
     try {
@@ -1055,6 +1100,21 @@ function openEditStudent(id) {
       document.getElementById('edit-candidate-symbol-emoji').value = symbol;
       document.getElementById('party-symbol-preview').innerHTML = symbol;
     }
+
+    // Load candidate photo
+    const photoPath = student.candidate_photo || '';
+    const photoPreview = document.getElementById('candidate-photo-preview');
+    const clearPhotoBtn = document.getElementById('btn-clear-candidate-photo');
+    document.getElementById('edit-candidate-photo-path').value = photoPath;
+    document.getElementById('edit-candidate-photo-file').value = '';
+    document.getElementById('photo-upload-status').style.display = 'none';
+    if (photoPath) {
+      photoPreview.innerHTML = `<img src="${photoPath}" alt="Candidate Photo">`;
+      if (clearPhotoBtn) clearPhotoBtn.style.display = 'inline-flex';
+    } else {
+      photoPreview.innerHTML = `<span class="photo-placeholder-icon">👤</span><span class="photo-placeholder-text">No photo</span>`;
+      if (clearPhotoBtn) clearPhotoBtn.style.display = 'none';
+    }
   }
 
   openModal('student-form-modal');
@@ -1203,8 +1263,13 @@ function renderSandboxCandidates() {
   const boys = groupCandidates.filter(c => c.gender === 'boy');
   const girls = groupCandidates.filter(c => c.gender === 'girl');
 
-  const createCard = (c) => `
+  const createCard = (c) => {
+    const photoHtml = c.candidate_photo
+      ? `<div class="candidate-tile-photo"><img src="${c.candidate_photo}" alt="${escapeHtml(c.name)}"></div>`
+      : `<div class="candidate-tile-photo placeholder"><span>👤</span></div>`;
+    return `
     <div class="candidate-tile-card">
+      ${photoHtml}
       <div class="candidate-tile-symbol">
         ${renderSymbolHtml(c.party_symbol)}
       </div>
@@ -1212,6 +1277,7 @@ function renderSandboxCandidates() {
       <span class="candidate-tile-party">${escapeHtml(c.party_name || 'Independent')}</span>
     </div>
   `;
+  };
 
   boysGrid.innerHTML = boys.length === 0 
     ? `<span class="text-muted text-center col-span-2">No boys registered for this group.</span>`
@@ -1326,7 +1392,11 @@ function renderVotingStep() {
     const isSelected = state.votingSelections[currentGroup.id][genderType] == c.id;
     const row = document.createElement('div');
     row.className = `candidate-vote-row ${isSelected ? 'selected' : ''}`;
+    const photoHtml = c.candidate_photo
+      ? `<div class="vote-row-photo"><img src="${c.candidate_photo}" alt="${escapeHtml(c.name)}"></div>`
+      : `<div class="vote-row-photo placeholder"><span>👤</span></div>`;
     row.innerHTML = `
+      ${photoHtml}
       <div class="vote-row-symbol">${renderSymbolHtml(c.party_symbol)}</div>
       <div class="vote-row-info">
         <h4 class="vote-row-name">${escapeHtml(c.name)}</h4>
@@ -1555,16 +1625,13 @@ function renderSymbolHtml(symbol) {
   if (!symbol) return '🌟';
   const clean = symbol.trim();
   const isImage = clean.startsWith('uploads/') || 
+                  clean.startsWith('symbols/') ||
                   clean.startsWith('http://') || 
                   clean.startsWith('https://') || 
                   clean.startsWith('data:image/') ||
                   /\.(png|jpe?g|gif|svg|webp)$/i.test(clean);
   if (isImage) {
-    let src = clean;
-    if (!clean.startsWith('uploads/') && !clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('data:image/')) {
-      src = 'uploads/' + clean;
-    }
-    return `<img src="${src}" alt="symbol" style="width:100%;height:100%;object-fit:cover;">`;
+    return `<img src="${clean}" alt="symbol" style="width:100%;height:100%;object-fit:cover;">`;
   }
   return symbol; // Returns Emoji characters directly
 }

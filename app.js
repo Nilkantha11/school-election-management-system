@@ -1039,12 +1039,21 @@ function openEditStudent(id) {
     document.getElementById('edit-candidate-symbol-path').value = symbol;
 
     // Set emoji select if standard emoji, else custom image
-    const isEmoji = !symbol.startsWith('uploads/');
-    if (isEmoji) {
+    const cleanSymbol = symbol.trim();
+    const isImage = cleanSymbol.startsWith('uploads/') || 
+                    cleanSymbol.startsWith('http://') || 
+                    cleanSymbol.startsWith('https://') || 
+                    cleanSymbol.startsWith('data:image/') ||
+                    /\.(png|jpe?g|gif|svg|webp)$/i.test(cleanSymbol);
+    if (isImage) {
+      let src = cleanSymbol;
+      if (!cleanSymbol.startsWith('uploads/') && !cleanSymbol.startsWith('http://') && !cleanSymbol.startsWith('https://') && !cleanSymbol.startsWith('data:image/')) {
+        src = 'uploads/' + cleanSymbol;
+      }
+      document.getElementById('party-symbol-preview').innerHTML = `<img src="${src}" alt="symbol">`;
+    } else {
       document.getElementById('edit-candidate-symbol-emoji').value = symbol;
       document.getElementById('party-symbol-preview').innerHTML = symbol;
-    } else {
-      document.getElementById('party-symbol-preview').innerHTML = `<img src="${symbol}" alt="symbol">`;
     }
   }
 
@@ -1147,16 +1156,16 @@ function downloadExcelTemplate() {
   const workbook = XLSX.utils.book_new();
   
   const redHouseData = [
-    { 'Name': 'John Doe', 'Gender': 'boy', 'Party Name': 'Victory Stars', 'Party Symbol': '🌟' },
-    { 'Name': 'Sarah Smith', 'Gender': 'girl', 'Party Name': 'Victory Stars', 'Party Symbol': '🌟' }
+    { 'Name': 'John Doe', 'Gender': 'boy', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png' },
+    { 'Name': 'Sarah Smith', 'Gender': 'girl', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png' }
   ];
   const blueHouseData = [
-    { 'Name': 'David Miller', 'Gender': 'boy', 'Party Name': 'Future Pioneers', 'Party Symbol': '🚀' },
-    { 'Name': 'Emma Davis', 'Gender': 'girl', 'Party Name': 'Future Pioneers', 'Party Symbol': '🚀' }
+    { 'Name': 'David Miller', 'Gender': 'boy', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg' },
+    { 'Name': 'Emma Davis', 'Gender': 'girl', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg' }
   ];
   const headPositionData = [
-    { 'Name': 'Robert Johnson', 'Gender': 'boy', 'Party Name': 'Democratic Youth', 'Party Symbol': '🦁' },
-    { 'Name': 'Patricia Brown', 'Gender': 'girl', 'Party Name': 'Democratic Youth', 'Party Symbol': '🦁' }
+    { 'Name': 'Robert Johnson', 'Gender': 'boy', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png' },
+    { 'Name': 'Patricia Brown', 'Gender': 'girl', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png' }
   ];
   
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(redHouseData), 'Red House');
@@ -1544,8 +1553,18 @@ function escapeQuote(text) {
 
 function renderSymbolHtml(symbol) {
   if (!symbol) return '🌟';
-  if (symbol.startsWith('uploads/')) {
-    return `<img src="${symbol}" alt="symbol" style="width:100%;height:100%;object-fit:cover;">`;
+  const clean = symbol.trim();
+  const isImage = clean.startsWith('uploads/') || 
+                  clean.startsWith('http://') || 
+                  clean.startsWith('https://') || 
+                  clean.startsWith('data:image/') ||
+                  /\.(png|jpe?g|gif|svg|webp)$/i.test(clean);
+  if (isImage) {
+    let src = clean;
+    if (!clean.startsWith('uploads/') && !clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('data:image/')) {
+      src = 'uploads/' + clean;
+    }
+    return `<img src="${src}" alt="symbol" style="width:100%;height:100%;object-fit:cover;">`;
   }
   return symbol; // Returns Emoji characters directly
 }

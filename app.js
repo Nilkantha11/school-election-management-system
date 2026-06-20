@@ -101,10 +101,12 @@ function switchView(viewId) {
   // Header element visibilities
   const logoutBtn = document.getElementById('logout-btn');
   const schoolBadge = document.getElementById('school-badge-container');
+  const changePassBtn = document.getElementById('header-change-pass-btn');
   
   if (viewId === 'login-view' || viewId === 'setup-view') {
     logoutBtn.classList.add('hidden');
     schoolBadge.classList.add('hidden');
+    if (changePassBtn) changePassBtn.classList.add('hidden');
   } else {
     logoutBtn.classList.remove('hidden');
     if (state.currentUser && state.currentUser.school) {
@@ -112,6 +114,14 @@ function switchView(viewId) {
       schoolBadge.classList.remove('hidden');
     } else {
       schoolBadge.classList.add('hidden');
+    }
+
+    if (changePassBtn) {
+      if (state.currentUser && (state.currentUser.role === 'principal' || state.currentUser.role === 'teacher')) {
+        changePassBtn.classList.remove('hidden');
+      } else {
+        changePassBtn.classList.add('hidden');
+      }
     }
   }
 }
@@ -860,8 +870,8 @@ function renderPrincipalTeachers() {
     li.innerHTML = `
       <span><strong>${escapeHtml(t.username)}</strong></span>
       <div>
-        <button class="list-action-btn list-inspect-btn" onclick="openChangeTeacherPass(${t.id}, '${escapeQuote(t.username)}')">Pass</button>
-        <button class="list-action-btn list-delete-btn" onclick="deleteTeacher(${t.id})">Delete</button>
+        <button class="list-action-btn list-inspect-btn" onclick="openChangeTeacherPass(${t.id}, '${escapeQuote(t.username)}')">Reset Pass</button>
+        <button class="list-action-btn list-delete-btn" onclick="deleteTeacher(${t.id}, '${escapeQuote(t.username)}')">Delete</button>
       </div>
     `;
     list.appendChild(li);

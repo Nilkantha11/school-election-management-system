@@ -55,6 +55,9 @@
       
       <div class="header-right">
         <div id="school-badge-container" class="header-tag hidden">Active School</div>
+        <button id="header-change-pass-btn" class="launch-btn blue-btn hidden" onclick="openChangePasswordModal()" style="margin-right: 12px;">
+          <span>Change Password</span>
+        </button>
         <button id="logout-btn" class="launch-btn rose-btn hidden">
           <span>Logout</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -383,9 +386,6 @@
           </div>
           <div class="header-actions">
             <div id="principal-expiry-warning" class="header-tag alert-tag">Days Left: 30</div>
-            <button onclick="openChangePasswordModal()" class="launch-btn blue-btn">
-              <span>Change Password</span>
-            </button>
           </div>
         </div>
 
@@ -551,9 +551,6 @@
             <p>Upload student lists, configure election candidates, set party symbols, and inspect configuration correctness.</p>
           </div>
           <div class="header-actions">
-            <button onclick="openChangePasswordModal()" class="launch-btn blue-btn">
-              <span>Change Password</span>
-            </button>
             <button id="btn-export-excel" class="launch-btn emerald-btn">
               <span>Export to Excel</span>
             </button>
@@ -920,51 +917,6 @@
           </div>
         </div>
 
-        <!-- Self-Service Change Password Modal -->
-        <div id="change-password-modal" class="modal-backdrop hidden">
-          <div class="modal-container mini-modal">
-            <div class="modal-header">
-              <h2>Change My Password</h2>
-              <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-              <form id="change-password-form" class="form-container">
-                <div id="change-password-message" class="alert-box hidden"></div>
-                <div class="form-group">
-                  <label>Current Password</label>
-                  <input type="password" id="self-current-password" placeholder="Enter current password" required>
-                </div>
-                <div class="form-group">
-                  <label>New Password</label>
-                  <input type="password" id="self-new-password" placeholder="Enter new password" required>
-                </div>
-                <button type="submit" class="action-btn blue-glow-btn">Update Password</button>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <!-- Admin Reset Principal Password Modal -->
-        <div id="admin-reset-pass-modal" class="modal-backdrop hidden">
-          <div class="modal-container mini-modal">
-            <div class="modal-header">
-              <h2>Reset Principal Password</h2>
-              <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-              <p>School: <strong id="admin-reset-school-name"></strong></p>
-              <form id="admin-reset-pass-form" class="form-container margin-top-20">
-                <input type="hidden" id="admin-reset-school-id">
-                <div class="form-group">
-                  <label>New Principal Password</label>
-                  <input type="password" id="admin-new-principal-password" placeholder="Enter new password" required>
-                </div>
-                <button type="submit" class="action-btn purple-glow-btn">Reset Password</button>
-              </form>
-            </div>
-          </div>
-        </div>
-
       </section>
 
     </main>
@@ -973,6 +925,52 @@
     <footer class="portal-footer">
       <p>&copy; 2026 DemocraSchools Election Suite. Served securely from Milesweb hosting environments. All sessions encrypted.</p>
     </footer>
+
+    <!-- Self-Service Change Password Modal -->
+    <div id="change-password-modal" class="modal-backdrop hidden">
+      <div class="modal-container mini-modal">
+        <div class="modal-header">
+          <h2>Change My Password</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="change-password-form" class="form-container">
+            <div id="change-password-message" class="alert-box hidden"></div>
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" id="self-current-password" placeholder="Enter current password" required>
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="self-new-password" placeholder="Enter new password" required>
+            </div>
+            <button type="submit" class="action-btn blue-glow-btn">Update Password</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Reset Principal Password Modal -->
+    <div id="admin-reset-pass-modal" class="modal-backdrop hidden">
+      <div class="modal-container mini-modal">
+        <div class="modal-header">
+          <h2>Reset Principal Password</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>School: <strong id="admin-reset-school-name"></strong></p>
+          <form id="admin-reset-pass-form" class="form-container margin-top-20">
+            <input type="hidden" id="admin-reset-school-id">
+            <div class="form-group">
+              <label>New Principal Password</label>
+              <input type="password" id="admin-new-principal-password" placeholder="Enter new password" required>
+            </div>
+            <button type="submit" class="action-btn purple-glow-btn">Reset Password</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="app.js"></script>

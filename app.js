@@ -582,6 +582,12 @@ function initEventListeners() {
       if (backdrop) backdrop.classList.add('hidden');
     });
   });
+
+  // Password changes
+  const changePassForm = document.getElementById('change-password-form');
+  if (changePassForm) changePassForm.addEventListener('submit', handleChangePasswordSubmit);
+  const adminResetPassForm = document.getElementById('admin-reset-pass-form');
+  if (adminResetPassForm) adminResetPassForm.addEventListener('submit', handleAdminResetPassSubmit);
 }
 
 /**
@@ -703,6 +709,7 @@ function renderSchoolsTable() {
       <td>
         <button class="list-action-btn list-inspect-btn" onclick="inspectSchool(${school.id})">Inspect</button>
         <button class="list-action-btn list-inspect-btn" style="color:var(--emerald-text); border-color:var(--emerald-border);" onclick="extendSchool(${school.id}, '${escapeQuote(school.name)}')">Extend</button>
+        <button class="list-action-btn list-inspect-btn" style="color:var(--orange-text); border-color:var(--orange-border);" onclick="openAdminResetPass(${school.id}, '${escapeQuote(school.name)}')">Reset Pass</button>
         <button class="list-action-btn list-delete-btn" onclick="deleteSchool(${school.id}, '${escapeQuote(school.name)}')">Delete</button>
       </td>
     `;
@@ -1717,4 +1724,73 @@ function renderSymbolHtml(symbol) {
     return `<img src="${clean}" alt="symbol" style="width:100%;height:100%;object-fit:cover;">`;
   }
   return symbol; // Returns Emoji characters directly
+}
+
+// ── PASSWORD MANAGEMENT ───────────────────────────────────────────────
+
+function openChangePasswordModal() {
+  document.getElementById('self-current-password').value = '';
+  document.getElementById('self-new-password').value = '';
+  const msg = document.getElementById('change-password-message');
+  if (msg) msg.className = 'alert-box hidden';
+  openModal('change-password-modal');
+}
+
+async function handleChangePasswordSubmit(e) {
+  e.preventDefault();
+  const msg = document.getElementById('change-password-message');
+  if (msg) msg.classList.add('hidden');
+  const oldPass = document.getElementById('self-current-password').value;
+  const newPass = document.getElementById('self-new-password').value;
+
+  const endpoint = state.currentUser.role === 'principal' 
+    ? 'api.php?action=principal_change_password' 
+    : 'api.php?action=teacher_change_password';
+
+  try {
+    const data = await apiPost(endpoint, {
+      old_password: oldPass,
+      new_password: newPass
+    });
+    if (msg) {
+      msg.className = 'alert-box success-alert';
+      msg.textContent = data.message;
+      msg.classList.remove('hidden');
+    }
+    setTimeout(() => {
+      closeModal('change-password-modal');
+    }, 1500);
+  } catch (err) {
+    if (msg) {
+      msg.className = 'alert-box error-alert';
+      msg.textContent = err.message;
+      msg.classList.remove('hidden');
+    } else {
+      alert(err.message);
+    }
+  }
+}
+
+function openAdminResetPass(schoolId, schoolName) {
+  document.getElementById('admin-reset-school-id').value = schoolId;
+  document.getElementById('admin-reset-school-name').textContent = schoolName;
+  document.getElementById('admin-new-principal-password').value = '';
+  openModal('admin-reset-pass-modal');
+}
+
+async function handleAdminResetPassSubmit(e) {
+  e.preventDefault();
+  const schoolId = document.getElementById('admin-reset-school-id').value;
+  const newPass = document.getElementById('admin-new-principal-password').value;
+
+  try {
+    const data = await apiPost('api.php?action=admin_reset_principal_password', {
+      school_id: schoolId,
+      new_password: newPass
+    });
+    alert(data.message);
+    closeModal('admin-reset-pass-modal');
+  } catch (err) {
+    alert(err.message);
+  }
 }

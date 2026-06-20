@@ -177,8 +177,8 @@ switch ($action) {
             }
         } 
         else if ($role === 'principal') {
-            $school_code = isset($input['school_code']) ? $input['school_code'] : '';
-            $password = isset($input['password']) ? $input['password'] : '';
+            $school_code = isset($input['school_code']) ? trim($input['school_code']) : '';
+            $password = isset($input['password']) ? trim($input['password']) : '';
             
             $stmt = $pdo->prepare("SELECT * FROM schools WHERE school_code = ?");
             $stmt->execute([$school_code]);
@@ -208,9 +208,9 @@ switch ($action) {
             }
         } 
         else if ($role === 'teacher') {
-            $school_code = isset($input['school_code']) ? $input['school_code'] : '';
-            $username = isset($input['username']) ? $input['username'] : '';
-            $password = isset($input['password']) ? $input['password'] : '';
+            $school_code = isset($input['school_code']) ? trim($input['school_code']) : '';
+            $username = isset($input['username']) ? trim($input['username']) : '';
+            $password = isset($input['password']) ? trim($input['password']) : '';
             
             $stmt = $pdo->prepare("SELECT * FROM schools WHERE school_code = ?");
             $stmt->execute([$school_code]);
@@ -461,6 +461,25 @@ switch ($action) {
         ]);
         break;
 
+    case 'admin_reset_principal_password':
+        requireRole(['admin']);
+        $input = json_decode(file_get_contents('php://input'), true);
+        $school_id = isset($input['school_id']) ? intval($input['school_id']) : 0;
+        $new_password = isset($input['new_password']) ? trim($input['new_password']) : '';
+        
+        if ($school_id <= 0 || empty($new_password)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'School ID and new password are required.']);
+            exit;
+        }
+        
+        $p_hash = password_hash($new_password, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("UPDATE schools SET principal_password_hash = ? WHERE id = ?");
+        $stmt->execute([$p_hash, $school_id]);
+        
+        echo json_encode(['success' => true, 'message' => 'Principal password reset successfully.']);
+        break;
+
     case 'admin_get_school_data':
         requireRole(['admin']);
         $inspect_id = isset($_GET['school_id']) ? intval($_GET['school_id']) : 0;
@@ -513,6 +532,65 @@ switch ($action) {
                 'voted_students' => intval($counts['voted'])
             ]
         ]);
+        break;
+
+    // --- SELF-SERVICE PASSWORD CHANGES ---
+    case 'principal_change_password':
+        requireRole(['principal']);
+        $input = json_decode(file_get_contents('php://input'), true);
+        $old_pass = isset($input['old_password']) ? trim($input['old_password']) : '';
+        $new_pass = isset($input['new_password']) ? trim($input['new_password']) : '';
+        
+        if (empty($old_pass) || empty($new_pass)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Old and new passwords are required.']);
+            exit;
+        }
+        
+        $stmt = $pdo->prepare("SELECT principal_password_hash FROM schools WHERE id = ?");
+        $stmt->execute([$school_id]);
+        $school = $stmt->fetch();
+        
+        if (!$school || !password_verify($old_pass, $school['principal_password_hash'])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Incorrect current password.']);
+            exit;
+        }
+        
+        $hash = password_hash($new_pass, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("UPDATE schools SET principal_password_hash = ? WHERE id = ?");
+        $stmt->execute([$hash, $school_id]);
+        
+        echo json_encode(['success' => true, 'message' => 'Password updated successfully.']);
+        break;
+
+    case 'teacher_change_password':
+        requireRole(['teacher']);
+        $input = json_decode(file_get_contents('php://input'), true);
+        $old_pass = isset($input['old_password']) ? trim($input['old_password']) : '';
+        $new_pass = isset($input['new_password']) ? trim($input['new_password']) : '';
+        
+        if (empty($old_pass) || empty($new_pass)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Old and new passwords are required.']);
+            exit;
+        }
+        
+        $stmt = $pdo->prepare("SELECT password_hash FROM teachers WHERE id = ?");
+        $stmt->execute([$_SESSION['teacher_id']]);
+        $teacher = $stmt->fetch();
+        
+        if (!$teacher || !password_verify($old_pass, $teacher['password_hash'])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Incorrect current password.']);
+            exit;
+        }
+        
+        $hash = password_hash($new_pass, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("UPDATE teachers SET password_hash = ? WHERE id = ?");
+        $stmt->execute([$hash, $_SESSION['teacher_id']]);
+        
+        echo json_encode(['success' => true, 'message' => 'Password updated successfully.']);
         break;
 
     // --- PRINCIPAL ACTIONS ---

@@ -130,7 +130,7 @@
             <button class="login-tab active" data-role="student">Voting Booth</button>
             <button class="login-tab" data-role="teacher">Teacher</button>
             <button class="login-tab" data-role="principal">Principal</button>
-            <button class="login-tab" data-role="admin">Super Admin</button>
+            <button class="login-tab" data-role="support">Support</button>
           </div>
 
           <!-- Student / Booth Setup Card -->
@@ -203,23 +203,35 @@
             </form>
           </div>
 
-          <!-- Super Admin Card -->
-          <div class="login-card" id="admin-login-card">
+          <!-- Support Card -->
+          <div class="login-card" id="support-card">
             <div class="card-title-block">
-              <h2>Super Admin Terminal</h2>
-              <p>System configuration panel for adding and monitoring multiple schools.</p>
+              <h2>Contact & Support</h2>
+              <p>Need a new account or require assistance? Send us an email.</p>
             </div>
-            <form id="admin-login-form" class="form-container">
-              <div class="form-group">
-                <label for="admin-username">Super Admin Username</label>
-                <input type="text" id="admin-username" placeholder="e.g. admin" required>
+            <div class="form-container" style="text-align: left; line-height: 1.6;">
+              <div style="background:var(--card-bg); padding:16px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:12px;">
+                <p style="margin-top:0;"><strong>Email:</strong> <a href="mailto:contact_mse@dailyritual.in" style="color:var(--blue-text); text-decoration:none;">contact_mse@dailyritual.in</a></p>
+                <p style="margin-top:12px; margin-bottom:4px;"><strong>Send Details:</strong></p>
+                <ul style="padding-left: 20px; color:var(--text-color); font-size: 0.95rem; margin-top:0;">
+                  <li>School name:</li>
+                  <li>Place:</li>
+                  <li>School CODE:</li>
+                  <li>Contact details:</li>
+                </ul>
+                <p style="color:var(--emerald-text); margin-bottom:0; margin-top:12px;">
+                  <em>Account will be created and password will be sent on same email within 2-5 working days.</em>
+                </p>
               </div>
-              <div class="form-group">
-                <label for="admin-password">Master Password</label>
-                <input type="password" id="admin-password" placeholder="••••••••" required>
+
+              <div style="background:rgba(245, 158, 11, 0.05); padding:16px; border-radius:8px; border:1px solid rgba(245, 158, 11, 0.2); margin-bottom:12px;">
+                <p style="margin-bottom:8px; margin-top:0; color:var(--orange-text);"><strong>Important: Subject Line</strong></p>
+                <ul style="padding-left: 20px; color:var(--text-color); font-size: 0.95rem; margin-top:0; margin-bottom:0;">
+                  <li>Add sub: <strong>NEW_ACCOUNT_REQUEST</strong> (for new accounts)</li>
+                  <li>Add sub: <strong>NEED_HELP</strong> (otherwise)</li>
+                </ul>
               </div>
-              <button type="submit" class="action-btn orange-glow-btn">Access Master Panel</button>
-            </form>
+            </div>
           </div>
 
           <div id="login-message" class="alert-box error-alert hidden"></div>
@@ -923,8 +935,32 @@
 
     <!-- Footer Area -->
     <footer class="portal-footer">
-      <p>&copy; 2026 DemocraSchools Election Suite. Served securely from Milesweb hosting environments. All sessions encrypted. | <a href="#" onclick="openModal('contact-pricing-modal'); return false;" style="color:var(--blue-text); text-decoration:none; font-weight:600;">Pricing & Contact</a></p>
+      <p>&copy; 2026 DemocraSchools Election Suite. Served securely from Milesweb hosting environments. All sessions encrypted. | <a href="#" onclick="openModal('contact-pricing-modal'); return false;" style="color:var(--blue-text); text-decoration:none; font-weight:600;">Pricing & Contact</a> | <a href="#" onclick="openModal('admin-login-modal'); return false;" style="color:var(--text-muted); text-decoration:none; font-size:0.85rem;">Admin Login</a></p>
     </footer>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="modal-backdrop hidden">
+      <div class="modal-container mini-modal">
+        <div class="modal-header">
+          <h2>Super Admin Terminal</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="admin-login-form" class="form-container">
+            <div id="admin-login-message" class="alert-box error-alert hidden"></div>
+            <div class="form-group">
+              <label for="admin-username">Super Admin Username</label>
+              <input type="text" id="admin-username" placeholder="e.g. admin" required>
+            </div>
+            <div class="form-group">
+              <label for="admin-password">Master Password</label>
+              <input type="password" id="admin-password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="action-btn orange-glow-btn">Access Master Panel</button>
+          </form>
+        </div>
+      </div>
+    </div>
 
     <!-- Contact & Pricing Modal -->
     <div id="contact-pricing-modal" class="modal-backdrop hidden">

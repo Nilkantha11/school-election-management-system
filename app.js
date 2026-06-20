@@ -203,10 +203,12 @@ function initLoginTabs() {
   });
 }
 
-function showLoginError(msg) {
-  const alertBox = document.getElementById('login-message');
-  alertBox.textContent = msg;
-  alertBox.classList.remove('hidden');
+function showLoginError(msg, alertBoxId = 'login-message') {
+  const alertBox = document.getElementById(alertBoxId);
+  if (alertBox) {
+    alertBox.textContent = msg;
+    alertBox.classList.remove('hidden');
+  }
 }
 
 /**
@@ -605,8 +607,9 @@ function initEventListeners() {
  */
 async function handleRoleLogin(e, role) {
   e.preventDefault();
-  const alertBox = document.getElementById('login-message');
-  alertBox.classList.add('hidden');
+  const alertBoxId = role === 'admin' ? 'admin-login-message' : 'login-message';
+  const alertBox = document.getElementById(alertBoxId);
+  if (alertBox) alertBox.classList.add('hidden');
 
   let payload = { role };
 
@@ -645,7 +648,7 @@ async function handleRoleLogin(e, role) {
           submitBtn.textContent = 'Lock & Activate Booth';
         }
       } catch (err) {
-        showLoginError(err.message);
+        showLoginError(err.message, alertBoxId);
       }
       return;
     } else {
@@ -674,7 +677,7 @@ async function handleRoleLogin(e, role) {
       checkSession();
     }
   } catch (err) {
-    showLoginError(err.message);
+    showLoginError(err.message, alertBoxId);
   }
 }
 

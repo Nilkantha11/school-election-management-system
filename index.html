@@ -204,7 +204,7 @@
           </div>
 
           <!-- Support Card -->
-          <div class="login-card" id="support-card">
+          <div class="login-card" id="support-card" style="max-height: 60vh; overflow-y: auto;">
             <div class="card-title-block">
               <h2>Contact & Support</h2>
               <p>Need a new account or require assistance? Send us an email.</p>
@@ -230,6 +230,31 @@
                   <li>Add sub: <strong>NEW_ACCOUNT_REQUEST</strong> (for new accounts)</li>
                   <li>Add sub: <strong>NEED_HELP</strong> (otherwise)</li>
                 </ul>
+              </div>
+
+              <hr class="form-divider" style="margin:20px 0;">
+
+              <h3 style="margin-bottom:12px; margin-top:0;">Pricing Details</h3>
+              <div style="background:var(--card-bg); padding:16px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:12px;">
+                <h4 style="margin-top:0; color:var(--blue-text);">Option 1 (Annual Plan)</h4>
+                <ul style="padding-left:20px; margin-bottom:0; color:var(--text-color); font-size:0.95rem;">
+                  <li style="margin-bottom:4px;"><strong>Rs 1000</strong> for the first year</li>
+                  <li style="margin-bottom:4px;"><strong>Rs 500</strong> for the second year</li>
+                  <li style="margin-bottom:4px;"><strong>Rs 100</strong> for the third year</li>
+                  <li><strong style="color:var(--emerald-text);">Free for lifetime</strong> after 3 years!</li>
+                </ul>
+              </div>
+              
+              <div style="background:var(--card-bg); padding:16px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:12px;">
+                <h4 style="margin-top:0; color:var(--blue-text);">Option 2 (Monthly Plan)</h4>
+                <p style="margin-bottom:0; color:var(--text-color); font-size:0.95rem;"><strong>Rs 100</strong> for 1 month</p>
+              </div>
+
+              <div style="background:rgba(239, 68, 68, 0.05); padding:16px; border-radius:8px; border:1px solid rgba(239, 68, 68, 0.2);">
+                <h4 style="margin-top:0; color:var(--rose-text);">Payment Instructions</h4>
+                <p style="margin-bottom:0; font-size:0.95rem; color:var(--text-color);">
+                  Please <strong>GPay</strong> the selected amount to <strong style="font-size:1.1rem;">9503008509</strong> and attach a screenshot with your email to <a href="mailto:contact_mse@dailyritual.in" style="color:var(--blue-text); text-decoration:none; font-weight:600;">contact_mse@dailyritual.in</a>.
+                </p>
               </div>
             </div>
           </div>
@@ -935,7 +960,7 @@
 
     <!-- Footer Area -->
     <footer class="portal-footer">
-      <p>&copy; 2026 DemocraSchools Election Suite. Served securely from Milesweb hosting environments. All sessions encrypted. | <a href="#" onclick="openModal('contact-pricing-modal'); return false;" style="color:var(--blue-text); text-decoration:none; font-weight:600;">Pricing & Contact</a> | <a href="#" onclick="openModal('admin-login-modal'); return false;" style="color:var(--text-muted); text-decoration:none; font-size:0.85rem;">Admin Login</a></p>
+      <p>&copy; 2026 DemocraSchools Election Suite. Served securely from Milesweb hosting environments. All sessions encrypted. | <a href="#" onclick="openModal('admin-login-modal'); return false;" style="color:var(--text-muted); text-decoration:none; font-size:0.85rem;">Admin Login</a></p>
     </footer>
 
     <!-- Admin Login Modal -->
@@ -958,47 +983,6 @@
             </div>
             <button type="submit" class="action-btn orange-glow-btn">Access Master Panel</button>
           </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Contact & Pricing Modal -->
-    <div id="contact-pricing-modal" class="modal-backdrop hidden">
-      <div class="modal-container medium-modal">
-        <div class="modal-header">
-          <h2>Contact & Pricing Details</h2>
-          <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body" style="text-align:left; line-height:1.6;">
-          <h3 style="margin-bottom:8px;">Contact Us</h3>
-          <p>Email: <a href="mailto:contact_mse@dailyritual.in" style="color:var(--blue-text); text-decoration:none;"><strong>contact_mse@dailyritual.in</strong></a></p>
-          
-          <hr class="form-divider" style="margin:20px 0;">
-          
-          <h3 style="margin-bottom:12px;">Pricing Details</h3>
-          <div style="background:var(--card-bg); padding:16px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:12px;">
-            <h4 style="margin-top:0; color:var(--blue-text);">Option 1 (Annual Plan)</h4>
-            <ul style="padding-left:20px; margin-bottom:0; color:var(--text-color);">
-              <li style="margin-bottom:4px;"><strong>Rs 1000</strong> for the first year</li>
-              <li style="margin-bottom:4px;"><strong>Rs 500</strong> for the second year</li>
-              <li style="margin-bottom:4px;"><strong>Rs 100</strong> for the third year</li>
-              <li><strong style="color:var(--emerald-text);">Free for lifetime</strong> after 3 years!</li>
-            </ul>
-          </div>
-          
-          <div style="background:var(--card-bg); padding:16px; border-radius:8px; border:1px solid var(--border-color);">
-            <h4 style="margin-top:0; color:var(--blue-text);">Option 2 (Monthly Plan)</h4>
-            <p style="margin-bottom:0; color:var(--text-color);"><strong>Rs 100</strong> for 1 month</p>
-          </div>
-
-          <hr class="form-divider" style="margin:20px 0;">
-          
-          <div style="background:rgba(239, 68, 68, 0.05); padding:16px; border-radius:8px; border:1px solid rgba(239, 68, 68, 0.2);">
-            <h4 style="margin-top:0; color:var(--rose-text);">Payment Instructions</h4>
-            <p style="margin-bottom:0; font-size:0.95rem; color:var(--text-color);">
-              Please <strong>GPay</strong> the selected amount to <strong style="font-size:1.1rem;">9503008509</strong> and attach a screenshot with your email to <a href="mailto:contact_mse@dailyritual.in" style="color:var(--blue-text); text-decoration:none; font-weight:600;">contact_mse@dailyritual.in</a>.
-            </p>
-          </div>
         </div>
       </div>
     </div>

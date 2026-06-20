@@ -117,7 +117,7 @@ function switchView(viewId) {
     }
 
     if (changePassBtn) {
-      if (state.currentUser && (state.currentUser.role === 'principal' || state.currentUser.role === 'teacher')) {
+      if (state.currentUser && (state.currentUser.role === 'principal' || state.currentUser.role === 'teacher' || state.currentUser.role === 'admin')) {
         changePassBtn.classList.remove('hidden');
       } else {
         changePassBtn.classList.add('hidden');
@@ -1756,9 +1756,12 @@ async function handleChangePasswordSubmit(e) {
   const oldPass = document.getElementById('self-current-password').value;
   const newPass = document.getElementById('self-new-password').value;
 
-  const endpoint = state.currentUser.role === 'principal' 
-    ? 'api.php?action=principal_change_password' 
-    : 'api.php?action=teacher_change_password';
+  let endpoint = 'api.php?action=teacher_change_password';
+  if (state.currentUser.role === 'principal') {
+    endpoint = 'api.php?action=principal_change_password';
+  } else if (state.currentUser.role === 'admin') {
+    endpoint = 'api.php?action=admin_change_password';
+  }
 
   try {
     const data = await apiPost(endpoint, {

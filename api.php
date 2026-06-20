@@ -594,6 +594,35 @@ switch ($action) {
         echo json_encode(['success' => true, 'message' => 'Password updated successfully.']);
         break;
 
+    case 'admin_change_password':
+        requireRole(['admin']);
+        $input = json_decode(file_get_contents('php://input'), true);
+        $old_pass = isset($input['old_password']) ? trim($input['old_password']) : '';
+        $new_pass = isset($input['new_password']) ? trim($input['new_password']) : '';
+        
+        if (empty($old_pass) || empty($new_pass)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Old and new passwords are required.']);
+            exit;
+        }
+        
+        $stmt = $pdo->prepare("SELECT password_hash FROM admin WHERE username = ?");
+        $stmt->execute([$_SESSION['username']]);
+        $admin = $stmt->fetch();
+        
+        if (!$admin || !password_verify($old_pass, $admin['password_hash'])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Incorrect current password.']);
+            exit;
+        }
+        
+        $hash = password_hash($new_pass, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("UPDATE admin SET password_hash = ? WHERE username = ?");
+        $stmt->execute([$hash, $_SESSION['username']]);
+        
+        echo json_encode(['success' => true, 'message' => 'Admin password updated successfully.']);
+        break;
+
     // --- PRINCIPAL ACTIONS ---
 
     case 'principal_get_dashboard':

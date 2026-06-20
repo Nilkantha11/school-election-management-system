@@ -232,6 +232,7 @@ switch ($action) {
                     $_SESSION['role'] = 'teacher';
                     $_SESSION['username'] = $username;
                     $_SESSION['school_id'] = $school['id'];
+                    $_SESSION['teacher_id'] = $teacher['id'];
                     echo json_encode(['success' => true, 'role' => 'teacher']);
                 } else {
                     http_response_code(401);

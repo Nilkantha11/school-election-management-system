@@ -622,6 +622,19 @@ function initEventListeners() {
   // Excel Export Click
   document.getElementById('btn-export-excel').addEventListener('click', exportStudentsToExcel);
 
+  // Sync Data Click
+  document.getElementById('btn-sync-roster').addEventListener('click', () => {
+    const btn = document.getElementById('btn-sync-roster');
+    btn.innerHTML = '<span>⏳ Syncing...</span>';
+    btn.disabled = true;
+    
+    // Load dashboard from server, which pulls the latest students list
+    loadTeacherDashboard().finally(() => {
+      btn.innerHTML = '<span>↻ Sync Data</span>';
+      btn.disabled = false;
+    });
+  });
+
   // Template Excel Download
   document.getElementById('btn-download-template').addEventListener('click', downloadExcelTemplate);
 

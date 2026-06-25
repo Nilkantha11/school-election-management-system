@@ -944,8 +944,9 @@ switch ($action) {
                 $name = isset($row['name']) ? trim($row['name']) : '';
                 $gender = isset($row['gender']) ? strtolower(trim($row['gender'])) : 'boy';
                 $group_name = isset($row['group_name']) ? trim($row['group_name']) : '';
+                $group_id = isset($row['group_id']) ? $row['group_id'] : null;
 
-                if (empty($name) || empty($group_name)) {
+                if (empty($name) || (empty($group_name) && empty($group_id))) {
                     continue; // Skip invalid rows
                 }
 
@@ -955,22 +956,26 @@ switch ($action) {
                 }
 
                 // Resolve group_id
-                $group_key = strtolower($group_name);
-                if (!isset($groups_map[$group_key])) {
-                    // Create group of type house dynamically
-                    $stmt_insert_group->execute([$school_id, $group_name]);
-                    $new_group_id = $pdo->lastInsertId();
-                    $groups_map[$group_key] = $new_group_id;
+                if (!empty($group_name)) {
+                    $group_key = strtolower($group_name);
+                    if (!isset($groups_map[$group_key])) {
+                        // Create group of type house dynamically
+                        $stmt_insert_group->execute([$school_id, $group_name]);
+                        $new_group_id = $pdo->lastInsertId();
+                        $groups_map[$group_key] = $new_group_id;
+                    }
+                    $group_id = $groups_map[$group_key];
+                } else if (!empty($group_id)) {
+                    $group_id = (int)$group_id;
                 }
-                $group_id = $groups_map[$group_key];
 
                 $code = isset($row['student_code']) ? trim($row['student_code']) : '';
                 if (empty($code)) {
                     $code = 'CAND_' . substr(md5($name . $group_id . $gender), 0, 8);
                 }
 
-                // In this flow, we only import candidates, so force is_candidate = 1
-                $is_candidate = 1;
+                // In this flow, fallback to is_candidate = 1 if not set
+                $is_candidate = isset($row['is_candidate']) ? (int)$row['is_candidate'] : 1;
                 $party_name = isset($row['party_name']) ? trim($row['party_name']) : null;
                 $party_symbol = isset($row['party_symbol']) ? trim($row['party_symbol']) : null;
                 $candidate_photo = isset($row['candidate_photo']) ? trim($row['candidate_photo']) : null;

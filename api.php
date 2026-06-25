@@ -939,6 +939,7 @@ switch ($action) {
 
             $imported = 0;
             $updated = 0;
+            $skipped = 0;
 
             foreach ($rows as $row) {
                 $name = isset($row['name']) ? trim($row['name']) : '';
@@ -947,6 +948,7 @@ switch ($action) {
                 $group_id = isset($row['group_id']) ? $row['group_id'] : null;
 
                 if (empty($name) || (empty($group_name) && empty($group_id))) {
+                    $skipped++;
                     continue; // Skip invalid rows
                 }
 
@@ -999,7 +1001,11 @@ switch ($action) {
             }
 
             $pdo->commit();
-            echo json_encode(['success' => true, 'message' => "Excel import processed successfully. Added: $imported, Updated: $updated students."]);
+            $msg = "Published successfully! Added: $imported, Updated: $updated";
+            if ($skipped > 0) {
+                $msg .= ", Skipped (Missing Name/Group): $skipped";
+            }
+            echo json_encode(['success' => true, 'message' => $msg]);
         } catch (Exception $e) {
             $pdo->rollBack();
             http_response_code(500);

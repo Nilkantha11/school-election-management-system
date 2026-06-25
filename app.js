@@ -23,9 +23,23 @@ const state = {
   votingStep: 0,
   votingSelections: {}, // Maps group_id -> { boy: candidate_id, girl: candidate_id }
   
+  // Draft offline state
+  draftStudents: JSON.parse(localStorage.getItem('draft_students') || '[]'),
+  
   // Charts instance
   turnoutChart: null
 };
+
+function updateDraftBadge() {
+  const btn = document.getElementById('btn-publish-drafts');
+  const badge = document.getElementById('draft-count-badge');
+  if (state.draftStudents.length > 0) {
+    btn.classList.remove('hidden');
+    badge.textContent = state.draftStudents.length;
+  } else {
+    btn.classList.add('hidden');
+  }
+}
 
 // DOM Content Loaded Handler
 document.addEventListener('DOMContentLoaded', () => {
@@ -526,15 +540,26 @@ function initEventListeners() {
 
     try {
       if (id) {
-        // Edit mode
-        payload.id = id;
-        await apiPost('api.php?action=teacher_edit_student', payload);
-        alert('Student record updated successfully.');
+        if (id.toString().startsWith('draft-')) {
+          // Edit draft
+          const idx = state.draftStudents.findIndex(s => s.id === id);
+          if (idx !== -1) {
+            state.draftStudents[idx] = { ...state.draftStudents[idx], ...payload };
+            localStorage.setItem('draft_students', JSON.stringify(state.draftStudents));
+            alert('Draft updated successfully. Click Publish to Cloud when ready.');
+          }
+        } else {
+          // Edit live
+          payload.id = id;
+          await apiPost('api.php?action=teacher_edit_student', payload);
+          alert('Student record updated successfully.');
+        }
       } else {
-        // Add mode
-        // Excel bulk upsert endpoint can be reused for single manual adds too!
-        await apiPost('api.php?action=teacher_upsert_students', { students: [payload] });
-        alert('Student record added successfully.');
+        // Add mode -> goes to Drafts
+        payload.id = 'draft-' + Date.now();
+        state.draftStudents.push(payload);
+        localStorage.setItem('draft_students', JSON.stringify(state.draftStudents));
+        alert('Student saved as Draft. Please Publish to Cloud when ready.');
       }
       closeModal('student-form-modal');
       loadTeacherDashboard();
@@ -557,6 +582,40 @@ function initEventListeners() {
     dropZone.classList.remove('dragover');
     if (e.dataTransfer.files.length > 0) {
       handleExcelImport(e.dataTransfer.files[0]);
+    }
+  });
+
+  // Publish Drafts Click
+  document.getElementById('btn-publish-drafts').addEventListener('click', async () => {
+    if (state.draftStudents.length === 0) return;
+    
+    // Remove the temporary 'draft-' IDs before sending to server
+    const payload = state.draftStudents.map(draft => {
+      const copy = { ...draft };
+      delete copy.id;
+      return copy;
+    });
+
+    try {
+      const btn = document.getElementById('btn-publish-drafts');
+      btn.innerHTML = '<span>⏳ Publishing...</span>';
+      btn.disabled = true;
+
+      const res = await apiPost('api.php?action=teacher_upsert_students', { students: payload });
+      
+      // Success: clear drafts
+      state.draftStudents = [];
+      localStorage.setItem('draft_students', '[]');
+      
+      alert(res.message || 'Drafts successfully published to cloud!');
+      loadTeacherDashboard();
+    } catch (err) {
+      alert('Publish failed: ' + err.message);
+    } finally {
+      const btn = document.getElementById('btn-publish-drafts');
+      btn.innerHTML = '<span>🚀 Publish Drafts to Cloud</span><span id="draft-count-badge" style="position:absolute; top:-8px; right:-8px; background:var(--rose-text); color:white; border-radius:50%; padding:2px 6px; font-size:0.75rem; font-weight:bold;">0</span>';
+      btn.disabled = false;
+      updateDraftBadge();
     }
   });
 
@@ -1057,6 +1116,7 @@ async function loadTeacherDashboard() {
     filterSelect.value = currentFilter;
 
     renderStudentsTable();
+    updateDraftBadge();
   } catch (err) {
     alert(err.message);
   }
@@ -1069,9 +1129,18 @@ function renderStudentsTable() {
   const searchVal = document.getElementById('roster-search').value.toLowerCase().trim();
   const groupVal = document.getElementById('roster-filter-group').value;
 
-  const filtered = state.students.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchVal) || s.student_code.toLowerCase().includes(searchVal);
-    const matchesGroup = (groupVal === 'all') || (s.group_id == groupVal);
+  const allStudents = [...state.draftStudents.map(s => ({...s, is_draft: true})), ...state.students];
+
+  const filtered = allStudents.filter(s => {
+    const sName = s.name ? s.name.toLowerCase() : '';
+    const sCode = s.student_code ? s.student_code.toLowerCase() : '';
+    const matchesSearch = sName.includes(searchVal) || sCode.includes(searchVal);
+    
+    // For drafts, we might only have group_name, not group_id
+    const matchesGroup = (groupVal === 'all') || 
+                         (s.group_id && s.group_id == groupVal) || 
+                         (s.group_name && state.groups.find(g => g.id == groupVal)?.name === s.group_name);
+                         
     return matchesSearch && matchesGroup;
   });
 
@@ -1082,6 +1151,11 @@ function renderStudentsTable() {
 
   filtered.forEach(s => {
     const tr = document.createElement('tr');
+    
+    if (s.is_draft) {
+      tr.style.backgroundColor = 'var(--surface)';
+      tr.style.borderLeft = '4px solid var(--rose-text)';
+    }
     
     const candidateText = s.is_candidate == 1 
       ? `<span class="badge badge-active" style="font-size:0.65rem;">Candidate</span>` 
@@ -1094,17 +1168,19 @@ function renderStudentsTable() {
          </div>`
       : '-';
 
+    const draftTag = s.is_draft ? `<span class="badge badge-inactive" style="background:var(--rose-bg);color:var(--rose-text);margin-left:8px;">DRAFT</span>` : '';
+
     tr.innerHTML = `
-      <td><code>${escapeHtml(s.student_code)}</code></td>
-      <td><strong>${escapeHtml(s.name)}</strong></td>
+      <td><code>${escapeHtml(s.student_code || '')}</code></td>
+      <td><strong>${escapeHtml(s.name || '')}</strong>${draftTag}</td>
       <td><code>${s.gender}</code></td>
-      <td>${escapeHtml(s.group_name)}</td>
+      <td>${escapeHtml(s.group_name || state.groups.find(g => g.id == s.group_id)?.name || '')}</td>
       <td>${s.has_voted == 1 ? '✓ Yes' : 'No'}</td>
       <td>${candidateText}</td>
       <td>${partyInfo}</td>
       <td>
-        <button class="list-action-btn list-inspect-btn" onclick="openEditStudent(${s.id})">Edit</button>
-        <button class="list-action-btn list-delete-btn" onclick="deleteStudent(${s.id})">Delete</button>
+        <button class="list-action-btn list-inspect-btn" onclick="openEditStudent('${s.id}')">Edit</button>
+        <button class="list-action-btn list-delete-btn" onclick="deleteStudent('${s.id}')">Delete</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -1116,19 +1192,14 @@ function filterStudentsTable() {
 }
 
 function openEditStudent(id) {
-  const student = state.students.find(s => s.id == id);
+  const allStudents = [...state.draftStudents, ...state.students];
+  const student = allStudents.find(s => s.id == id);
   if (!student) return;
 
-  document.getElementById('student-modal-title').textContent = 'Edit Candidate Record';
   document.getElementById('edit-student-id').value = student.id;
-  document.getElementById('edit-student-code').value = student.student_code;
+  document.getElementById('edit-student-code').value = student.student_code || '';
   document.getElementById('edit-student-name').value = student.name;
   document.getElementById('edit-student-gender').value = student.gender;
-  document.getElementById('edit-student-group').value = student.group_id;
-
-  const isCandidate = true; // In this flow everyone is a candidate
-  const studentCandidateCheckbox = document.getElementById('edit-student-candidate');
-  if (studentCandidateCheckbox) studentCandidateCheckbox.checked = isCandidate;
 
   const subpanel = document.getElementById('candidate-details-subpanel');
   if (subpanel) {
@@ -1178,7 +1249,12 @@ function openEditStudent(id) {
 async function deleteStudent(id) {
   if (confirm('Are you sure you want to delete this student record?')) {
     try {
-      await apiPost('api.php?action=teacher_delete_student', { id });
+      if (id.toString().startsWith('draft-')) {
+        state.draftStudents = state.draftStudents.filter(s => s.id !== id);
+        localStorage.setItem('draft_students', JSON.stringify(state.draftStudents));
+      } else {
+        await apiPost('api.php?action=teacher_delete_student', { id });
+      }
       loadTeacherDashboard();
     } catch (err) {
       alert(err.message);
@@ -1233,8 +1309,12 @@ function handleExcelImport(file) {
         return;
       }
 
-      const res = await apiPost('api.php?action=teacher_upsert_students', { students: formatted });
-      alert(res.message);
+      formatted.forEach(f => {
+        f.id = 'draft-' + Date.now() + Math.random().toString(36).substr(2, 5);
+        state.draftStudents.push(f);
+      });
+      localStorage.setItem('draft_students', JSON.stringify(state.draftStudents));
+      alert(`Imported ${formatted.length} students as Drafts. Click 'Publish Drafts to Cloud' when ready.`);
       loadTeacherDashboard();
     } catch (err) {
       alert('Failed to parse Excel: ' + err.message);

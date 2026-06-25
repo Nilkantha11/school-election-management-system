@@ -1220,9 +1220,9 @@ function handleExcelImport(file) {
               gender: gender ? gender.toLowerCase().trim() : 'boy',
               group_name: sheetName, // The sheet name represents the group name
               is_candidate: 1,
-              party_name: findVal(['partyname', 'party']) || '',
-              party_symbol: findVal(['partysymbol', 'symbol']) || '',
-              candidate_photo: findVal(['candidatephoto', 'photo', 'image']) || ''
+              party_name: findVal(['partyname', 'party', 'partynameoptional']) || '',
+              party_symbol: findVal(['partysymbol', 'symbol', 'partysymbolimageurl']) || '',
+              candidate_photo: findVal(['candidatephoto', 'photo', 'image', 'candidatephotourl']) || ''
             });
           }
         });
@@ -1272,16 +1272,16 @@ function downloadExcelTemplate() {
   const workbook = XLSX.utils.book_new();
   
   const redHouseData = [
-    { 'Student Code': '', 'Name': 'John Doe', 'Gender': 'boy', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png', 'Candidate Photo': 'john.jpg' },
-    { 'Student Code': '', 'Name': 'Sarah Smith', 'Gender': 'girl', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png', 'Candidate Photo': 'sarah.jpg' }
+    { 'Student Code': '', 'Full Name': 'John Doe', 'Gender': 'boy', 'Party Name': 'Victory Stars', 'Party Symbol Image URL': 'star.png', 'Candidate Photo URL': 'john.jpg' },
+    { 'Student Code': '', 'Full Name': 'Sarah Smith', 'Gender': 'girl', 'Party Name': 'Victory Stars', 'Party Symbol Image URL': 'star.png', 'Candidate Photo URL': 'sarah.jpg' }
   ];
   const blueHouseData = [
-    { 'Student Code': '', 'Name': 'David Miller', 'Gender': 'boy', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg', 'Candidate Photo': '' },
-    { 'Student Code': '', 'Name': 'Emma Davis', 'Gender': 'girl', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg', 'Candidate Photo': '' }
+    { 'Student Code': '', 'Full Name': 'David Miller', 'Gender': 'boy', 'Party Name': 'Future Pioneers', 'Party Symbol Image URL': 'rocket.jpg', 'Candidate Photo URL': '' },
+    { 'Student Code': '', 'Full Name': 'Emma Davis', 'Gender': 'girl', 'Party Name': 'Future Pioneers', 'Party Symbol Image URL': 'rocket.jpg', 'Candidate Photo URL': '' }
   ];
   const headPositionData = [
-    { 'Student Code': '', 'Name': 'Robert Johnson', 'Gender': 'boy', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png', 'Candidate Photo': '' },
-    { 'Student Code': '', 'Name': 'Patricia Brown', 'Gender': 'girl', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png', 'Candidate Photo': '' }
+    { 'Student Code': '', 'Full Name': 'Robert Johnson', 'Gender': 'boy', 'Party Name': 'Democratic Youth', 'Party Symbol Image URL': 'lion.png', 'Candidate Photo URL': '' },
+    { 'Student Code': '', 'Full Name': 'Patricia Brown', 'Gender': 'girl', 'Party Name': 'Democratic Youth', 'Party Symbol Image URL': 'lion.png', 'Candidate Photo URL': '' }
   ];
   
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(redHouseData), 'Red House');

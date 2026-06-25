@@ -1221,7 +1221,8 @@ function handleExcelImport(file) {
               group_name: sheetName, // The sheet name represents the group name
               is_candidate: 1,
               party_name: findVal(['partyname', 'party']) || '',
-              party_symbol: findVal(['partysymbol', 'symbol']) || ''
+              party_symbol: findVal(['partysymbol', 'symbol']) || '',
+              candidate_photo: findVal(['candidatephoto', 'photo', 'image']) || ''
             });
           }
         });
@@ -1271,16 +1272,16 @@ function downloadExcelTemplate() {
   const workbook = XLSX.utils.book_new();
   
   const redHouseData = [
-    { 'Name': 'John Doe', 'Gender': 'boy', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png' },
-    { 'Name': 'Sarah Smith', 'Gender': 'girl', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png' }
+    { 'Student Code': '', 'Name': 'John Doe', 'Gender': 'boy', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png', 'Candidate Photo': 'john.jpg' },
+    { 'Student Code': '', 'Name': 'Sarah Smith', 'Gender': 'girl', 'Party Name': 'Victory Stars', 'Party Symbol': 'star.png', 'Candidate Photo': 'sarah.jpg' }
   ];
   const blueHouseData = [
-    { 'Name': 'David Miller', 'Gender': 'boy', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg' },
-    { 'Name': 'Emma Davis', 'Gender': 'girl', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg' }
+    { 'Student Code': '', 'Name': 'David Miller', 'Gender': 'boy', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg', 'Candidate Photo': '' },
+    { 'Student Code': '', 'Name': 'Emma Davis', 'Gender': 'girl', 'Party Name': 'Future Pioneers', 'Party Symbol': 'rocket.jpg', 'Candidate Photo': '' }
   ];
   const headPositionData = [
-    { 'Name': 'Robert Johnson', 'Gender': 'boy', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png' },
-    { 'Name': 'Patricia Brown', 'Gender': 'girl', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png' }
+    { 'Student Code': '', 'Name': 'Robert Johnson', 'Gender': 'boy', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png', 'Candidate Photo': '' },
+    { 'Student Code': '', 'Name': 'Patricia Brown', 'Gender': 'girl', 'Party Name': 'Democratic Youth', 'Party Symbol': 'lion.png', 'Candidate Photo': '' }
   ];
   
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(redHouseData), 'Red House');
